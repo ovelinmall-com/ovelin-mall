@@ -49,8 +49,8 @@ async function buildAll() {
       "pg-native",
       "oracledb",
       "mongodb-client-encryption",
-      "nodemailer",
-      "handlebars",
+      // "nodemailer" — bundled (needed in HF Docker)
+      // "handlebars" — bundled (needed in HF Docker)
       "knex",
       "typeorm",
       "protobufjs",

@@ -440,6 +440,30 @@ router.post("/smm/order", requireUser, async (req, res) => {
 });
 
 // ── Admin: test connection to external SMM provider ──────────────────────────
+// ── Admin: رصيد المورد الحقيقي ────────────────────────────────────────────────
+router.get("/admin/smm/balance", requireAdmin, async (_req, res) => {
+  try {
+    const body = new URLSearchParams({ key: SMM_KEY, action: "balance" });
+    const r = await fetch(SMM_URL, {
+      method: "POST",
+      body: body.toString(),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await r.json() as any;
+    if (data?.error) return void res.status(502).json({ error: data.error });
+    const balanceUsd = parseFloat(data?.balance ?? "0");
+    res.json({
+      balanceUsd,
+      balanceSdg: balanceUsd * USD_TO_SDG,
+      currency: (data?.currency as string) ?? "USD",
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.status(502).json({ error: err?.message ?? "فشل جلب الرصيد من المورد" });
+  }
+});
+
 router.get("/admin/smm/connection-status", requireAdmin, async (_req, res) => {
   try {
     const body = new URLSearchParams({ key: SMM_KEY, action: "services" });

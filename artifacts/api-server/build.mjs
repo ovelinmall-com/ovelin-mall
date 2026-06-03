@@ -100,9 +100,6 @@ async function buildAll() {
       "puppeteer",
       "puppeteer-core",
       "electron",
-      "link-preview-js",
-      "qrcode-terminal",
-      "jimp",
     ],
     sourcemap: "linked",
     plugins: [

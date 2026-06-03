@@ -234,8 +234,6 @@ export default function SupportDetailPage() {
           return (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.02 }}
               className={cn("flex", mine ? "justify-end" : "justify-start")}
             >

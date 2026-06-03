@@ -187,7 +187,7 @@ function App() {
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
   const [splashDone, setSplashDone] = useState(false);
   return (
-    <MotionConfig transition={{ duration: 0.15, ease: "easeOut" }}>
+    <MotionConfig>
       <PersistQueryClientProvider
         client={queryClient}
         persistOptions={{ persister, maxAge: 24 * 60 * 60 * 1000 }}

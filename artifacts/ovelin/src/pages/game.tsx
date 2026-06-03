@@ -457,8 +457,6 @@ export default function Game() {
               {/* Platform image in glowing circle */}
               {info.bgImage && (
                 <motion.div
-                  initial={{ scale: 0.75, opacity: 0, y: 16 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
                   transition={{ type: "spring", stiffness: 220, damping: 20 }}
                   className="w-24 h-24 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(236,72,153,0.55)] border-[3px] border-white/40 ring-4 ring-pink-400/25 mb-4"
                 >
@@ -483,7 +481,7 @@ export default function Game() {
             </div>
           ) : isPubg ? (
             <div className="flex flex-col items-center text-center">
-              <motion.div initial={{ scale: 0.72, opacity: 0, y: 18 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 200, damping: 22 }} className="w-28 h-28 rounded-3xl overflow-hidden shadow-[0_22px_60px_-10px_rgba(236,72,153,0.5)] border-[3px] border-pink-400/50 ring-4 ring-pink-500/20 mb-4">
+              <motion.div transition={{ type: "spring", stiffness: 200, damping: 22 }} className="w-28 h-28 rounded-3xl overflow-hidden shadow-[0_22px_60px_-10px_rgba(236,72,153,0.5)] border-[3px] border-pink-400/50 ring-4 ring-pink-500/20 mb-4">
                 <img src={info.bgImage ?? ""} alt={info.name} className="w-full h-full object-cover" />
               </motion.div>
               <div className="text-[10px] tracking-[0.4em] text-pink-300 font-black uppercase mb-2">Ovelin Premium</div>
@@ -503,7 +501,7 @@ export default function Game() {
             </div>
           ) : info.bgImage ? (
             <div className="flex flex-col items-center text-center">
-              <motion.div initial={{ scale: 0.72, opacity: 0, y: 18 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 200, damping: 22 }} className="w-44 h-44 rounded-3xl overflow-hidden shadow-[0_22px_60px_-10px_rgba(0,0,0,0.6)] border-[3px] border-white/50 ring-4 ring-white/20 mb-4">
+              <motion.div transition={{ type: "spring", stiffness: 200, damping: 22 }} className="w-44 h-44 rounded-3xl overflow-hidden shadow-[0_22px_60px_-10px_rgba(0,0,0,0.6)] border-[3px] border-white/50 ring-4 ring-white/20 mb-4">
                 <img src={info.bgImage} alt={info.name} className="w-full h-full object-cover" style={{ imageRendering: "auto" }} />
               </motion.div>
               <div className="text-[10px] opacity-80 tracking-[0.2em] font-bold mb-1">OVELIN PREMIUM</div>
@@ -610,8 +608,6 @@ export default function Game() {
               return (
                 <motion.div
                   key={p.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   className="fancy-card rounded-2xl overflow-hidden hover:shadow-[0_8px_30px_rgba(236,72,153,0.18)] hover:border-pink-300 transition relative"
                 >
@@ -740,8 +736,6 @@ export default function Game() {
               return (
                 <motion.button
                   key={p.id}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.07 }}
                   whileTap={{ scale: 0.985 }}
                   onClick={() => {
@@ -833,8 +827,6 @@ export default function Game() {
               {/* ── Card 1: شحن عبر الـ ID ── */}
               <Link href="/pubg-topup">
                 <motion.div
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
                   whileTap={{ scale: 0.97 }}
                   className="relative w-full rounded-3xl overflow-hidden border border-pink-500/60 shadow-[0_8px_32px_rgba(236,72,153,0.35)] cursor-pointer"
                 >
@@ -869,9 +861,6 @@ export default function Game() {
               {/* ── Card 2: أكواد جاهزة ── */}
               <Link href="/pubg-codes">
                 <motion.div
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
                   whileTap={{ scale: 0.97 }}
                   className="relative w-full rounded-3xl overflow-hidden border border-pink-500/40 shadow-[0_8px_24px_rgba(168,85,247,0.25)] cursor-pointer"
                 >
@@ -1277,8 +1266,6 @@ export default function Game() {
                   return (
                     <motion.button
                       key={p.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
                       whileTap={{ scale: 0.96 }}
                       onClick={() => !outOfStock && openDetail(p)}
@@ -1309,12 +1296,12 @@ export default function Game() {
                           <div className="mt-1.5 flex items-center justify-between gap-1">
                             <AnimatePresence mode="wait">
                               {isRevealed ? (
-                                <motion.div key="price" initial={{ opacity: 0, scale: 0.7, y: 4 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="flex items-baseline gap-0.5 bg-white/95 text-pink-700 rounded-full px-2 py-0.5 shadow">
+                                <motion.div key="price" className="flex items-baseline gap-0.5 bg-white/95 text-pink-700 rounded-full px-2 py-0.5 shadow">
                                   <span className="text-[13px] font-black leading-none">{Number(p.price).toFixed(2)}</span>
                                   <span className="text-[8px] font-bold opacity-80">ج.س</span>
                                 </motion.div>
                               ) : (
-                                <motion.div key="reveal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1 bg-white/25 backdrop-blur text-white rounded-full px-2 py-0.5 text-[10px] font-bold border border-white/40">
+                                <motion.div key="reveal" exit={{ opacity: 0 }} className="flex items-center gap-1 bg-white/25 backdrop-blur text-white rounded-full px-2 py-0.5 text-[10px] font-bold border border-white/40">
                                   <Eye className="w-2.5 h-2.5" />
                                   عرض السعر
                                 </motion.div>
@@ -1607,8 +1594,6 @@ export default function Game() {
                 </button>
                 <div className="relative text-center pt-6">
                   <motion.div
-                    initial={{ scale: 0.6, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: "spring", stiffness: 220, damping: 15 }}
                     className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-md border border-white/40 shadow-xl mb-3"
                   >
@@ -1624,8 +1609,6 @@ export default function Game() {
                     {detailProduct.quantity ?? detailProduct.description}
                   </div>
                   <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ delay: 0.15, type: "spring" }}
                     className="mt-4 inline-flex items-baseline gap-1 px-5 py-2 rounded-full bg-white text-pink-700 shadow-2xl border-2 border-white/60"
                   >
@@ -1814,8 +1797,6 @@ export default function Game() {
               {resultCodes.map((code, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{ delay: idx * 0.08, type: "spring", stiffness: 200 }}
                   className="rounded-xl overflow-hidden shadow-[0_0_20px_rgba(236,72,153,0.3)] border border-pink-500/40"
                 >

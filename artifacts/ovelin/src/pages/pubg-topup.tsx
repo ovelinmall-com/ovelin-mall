@@ -106,7 +106,6 @@ function RingChart({ pct, color, size = 56, label }: { pct: number; color: strin
           strokeDasharray={circ}
           initial={{ strokeDashoffset: circ }}
           animate={{ strokeDashoffset: circ - dash }}
-          transition={{ duration: 1.4, ease: "easeOut", delay: 0.2 }}
         />
       </svg>
       <span className="text-[10px] text-pink-300/70 font-bold text-center leading-tight">{label}</span>
@@ -169,9 +168,7 @@ function RecentBuyers() {
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={idx}
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.35 }}
+        key={idx} exit={{ opacity: 0, y: -8 }}
         className="flex items-center gap-2 bg-white/5 border border-pink-800/30 rounded-full px-3 py-1.5"
       >
         <span className="text-base">{buyer.avatar}</span>
@@ -224,7 +221,6 @@ function VIPProgress({ count }: { count: number }) {
           className="h-2 rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
           style={{ backgroundColor: cur.color }}
         />
       </div>
@@ -438,7 +434,6 @@ export default function PubgTopup() {
           ].map((s, i) => (
             <motion.div
               key={s.label}
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.07, duration: 0.4 }}
               className="rounded-2xl bg-white/5 border border-pink-800/30 py-3 flex flex-col items-center gap-1"
             >
@@ -512,7 +507,6 @@ export default function PubgTopup() {
               return (
                 <motion.button
                   key={p.id}
-                  initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.05, type: "spring", stiffness: 280, damping: 22 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleSelect(p)}
@@ -603,8 +597,7 @@ export default function PubgTopup() {
         {/* ── Selected Package Detail ── */}
         <AnimatePresence>
           {selected && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            <motion.div animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
               className="mb-4 overflow-hidden"
             >
               <div className="rounded-2xl border border-pink-500/40 overflow-hidden"
@@ -645,7 +638,6 @@ export default function PubgTopup() {
                       className={`h-2 rounded-full ${balance >= selPrice ? "bg-gradient-to-r from-emerald-500 to-green-400" : "bg-gradient-to-r from-red-500 to-rose-400"}`}
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(100, (balance / Math.max(balance, selPrice)) * 100)}%` }}
-                      transition={{ duration: 0.8 }}
                     />
                   </div>
                   {balance < selPrice && (
@@ -660,8 +652,7 @@ export default function PubgTopup() {
         {/* ── Player ID Input ── */}
         <AnimatePresence>
           {selected && checkoutState === "idle" && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            <motion.div exit={{ opacity: 0 }}
               className="mb-4"
             >
               <div className="rounded-2xl bg-white/5 border border-pink-800/30 p-4">
@@ -696,8 +687,7 @@ export default function PubgTopup() {
         {/* ── Error ── */}
         <AnimatePresence>
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            <motion.div exit={{ opacity: 0 }}
               className="mb-4 flex items-start gap-2 p-3 rounded-2xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs"
             >
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
@@ -730,13 +720,12 @@ export default function PubgTopup() {
         {/* ── Success Card ── */}
         <AnimatePresence>
           {checkoutState === "done" && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+            <motion.div exit={{ opacity: 0 }}
               className="mb-4 rounded-2xl overflow-hidden border border-emerald-500/40"
               style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.08))" }}
             >
               <div className="p-6 text-center">
-                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}>
+                <motion.div animate={{ scale: [1, 1.2, 1] }}>
                   <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto mb-3" />
                 </motion.div>
                 <div className="text-xl font-black text-white mb-1">تم الشراء بنجاح! 🎉</div>
@@ -822,9 +811,7 @@ export default function PubgTopup() {
                 </button>
                 <AnimatePresence>
                   {openFaq === faq.id && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.22 }}
+                    <motion.div animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
                       <div className="px-4 py-3 text-pink-200/70 text-sm leading-relaxed border-t border-pink-800/20">

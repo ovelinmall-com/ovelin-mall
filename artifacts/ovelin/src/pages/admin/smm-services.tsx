@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, Users, Heart, Eye, MessageCircle, Share2,
   Edit3, Check, X, Loader2, AlertCircle, RefreshCw, Zap,
+  Wallet, TrendingUp, RefreshCcw,
 } from "lucide-react";
 
 // ══ Types ════════════════════════════════════════════════════
@@ -128,6 +129,26 @@ export default function AdminSmmServices() {
   const seedMutation = useMutation({
     mutationFn: (clear: boolean) => seedSmm(clear),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-smm-products"] }),
+  });
+
+  // ── Provider balance ────────────────────────────────────────
+  const {
+    data: balanceData,
+    isLoading: balanceLoading,
+    isError: balanceError,
+    refetch: refetchBalance,
+    isFetching: balanceFetching,
+  } = useQuery({
+    queryKey: ["admin-smm-balance"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/smm/balance", { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "فشل جلب الرصيد");
+      return data as { balanceUsd: number; balanceSdg: number; currency: string; fetchedAt: string };
+    },
+    enabled: isAdmin,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // ── Filters ────────────────────────────────────────────────
@@ -250,12 +271,78 @@ export default function AdminSmmServices() {
         </div>
 
         {/* ── API key notice ──────────────────────────────────── */}
-        <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3 mb-5 flex items-start gap-2 text-xs text-amber-800">
+        <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3 mb-4 flex items-start gap-2 text-xs text-amber-800">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
           <div>
             <span className="font-bold">⚠️ مفتاح API المورد ظاهر بإرادة صاحب المشروع: </span>
             <span className="font-mono bg-amber-100 px-1.5 py-0.5 rounded text-[10px]">0b28edf644be7e4c28874b5e3b2a44a4</span>
             <span className="mr-1 opacity-70"> — صاحب المشروع يتحمل كامل المسؤولية.</span>
+          </div>
+        </div>
+
+        {/* ── Provider Balance Card ─────────────────────────────── */}
+        <div className="rounded-2xl border mb-5 overflow-hidden shadow-sm">
+          <div className="bg-gradient-to-l from-purple-700 to-pink-700 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-white">
+              <Wallet className="w-4 h-4" />
+              <span className="font-bold text-sm">رصيد المورد — honestsmm.com</span>
+            </div>
+            <button
+              onClick={() => refetchBalance()}
+              disabled={balanceFetching}
+              className="flex items-center gap-1 text-white/80 hover:text-white text-xs transition active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCcw className={`w-3.5 h-3.5 ${balanceFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </button>
+          </div>
+
+          <div className="bg-white px-4 py-4">
+            {balanceLoading ? (
+              <div className="flex items-center gap-2 text-pink-500 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>جاري جلب الرصيد...</span>
+              </div>
+            ) : balanceError || !balanceData ? (
+              <div className="flex items-center gap-2 text-red-500 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                <span>فشل جلب الرصيد من المورد</span>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {/* الرصيد بالدولار */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-gray-500 text-xs">
+                    <TrendingUp className="w-3.5 h-3.5 text-purple-500" />
+                    <span>الرصيد بالدولار الأمريكي</span>
+                  </div>
+                  <span className="text-xl font-black text-purple-700 dir-ltr" dir="ltr">
+                    $ {balanceData.balanceUsd.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* الرصيد بالجنيه السوداني */}
+                <div className="flex items-center justify-between bg-purple-50 rounded-xl px-3 py-2">
+                  <div className="flex items-center gap-2 text-gray-500 text-xs">
+                    <Wallet className="w-3.5 h-3.5 text-pink-500" />
+                    <span>ما يعادله بالجنيه السوداني</span>
+                    <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-mono">
+                      1$ = 800 ج.س
+                    </span>
+                  </div>
+                  <span className="text-lg font-black text-pink-700">
+                    {balanceData.balanceSdg.toLocaleString("ar-SD")} ج.س
+                  </span>
+                </div>
+
+                {/* وقت آخر تحديث */}
+                {balanceData.fetchedAt && (
+                  <div className="text-[10px] text-gray-400 text-left" dir="ltr">
+                    آخر تحديث: {new Date(balanceData.fetchedAt).toLocaleTimeString("ar-SA")}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -381,8 +468,6 @@ export default function AdminSmmServices() {
             return (
               <motion.div
                 key={p.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.02, 0.3) }}
                 className="rounded-2xl bg-white border border-pink-100 shadow-sm overflow-hidden"
               >
@@ -536,15 +621,11 @@ export default function AdminSmmServices() {
       <AnimatePresence>
         {showSeedModal && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center p-4"
             onClick={() => { if (!seedMutation.isPending) setShowSeedModal(false); }}
           >
             <motion.div
-              initial={{ y: 60 }}
-              animate={{ y: 0 }}
               exit={{ y: 60 }}
               className="bg-white rounded-3xl w-full max-w-md p-5 space-y-4"
               onClick={(e) => e.stopPropagation()}

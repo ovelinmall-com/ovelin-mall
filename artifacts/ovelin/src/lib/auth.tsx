@@ -14,7 +14,7 @@
 // صاحب المشروع يتحمل كامل المسؤولية عن إبقاء الرابط ظاهراً.
 // ============================================================
 
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { createContext, useContext, ReactNode, useMemo, useCallback } from "react";
 import {
   useGetMe,
   getGetMeQueryKey,
@@ -51,8 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     query: {
       queryKey: getGetMeQueryKey(),
       retry: false,
-      refetchInterval: 15000,
-      refetchOnWindowFocus: true,
+      // ✅ FIX: رفع من 15s → 60s لتقليل re-renders المتكررة
+      // كل تحديث لـ auth context يُعيد رسم كامل شجرة التطبيق
+      refetchInterval: 60000,
+      refetchOnWindowFocus: false,
     },
   });
 
@@ -60,11 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const logoutMutation = useLogout();
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-  };
+  }, [queryClient]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await logoutMutation.mutateAsync();
     } catch {
@@ -73,12 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.setQueryData(getGetMeQueryKey(), null);
     queryClient.clear();
     setLocation("/login");
-  };
+  }, [logoutMutation, queryClient, setLocation]);
+
+  // ✅ FIX: useMemo يمنع تغيير مرجع context في كل render
+  // بدونه كان كل مكوّن يستخدم useAuth() يُعاد رسمه حتى لو لم تتغير البيانات
+  const value = useMemo<AuthContextType>(
+    () => ({ user: (user as User | undefined) || null, isLoading, isError, refresh, logout }),
+    [user, isLoading, isError, refresh, logout],
+  );
 
   return (
-    <AuthContext.Provider
-      value={{ user: (user as User | undefined) || null, isLoading, isError, refresh, logout }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

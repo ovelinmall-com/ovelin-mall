@@ -53,8 +53,6 @@ function PostCard({ post, onClick }: { post: Post; onClick: () => void }) {
   return (
     <motion.button
       layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className="w-full text-right"
@@ -125,8 +123,6 @@ function PostCard({ post, onClick }: { post: Post; onClick: () => void }) {
 function PostDetail({ post, onBack }: { post: Post; onBack: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
     >
       <button

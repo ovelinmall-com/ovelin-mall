@@ -14,7 +14,7 @@
 // صاحب المشروع يتحمل كامل المسؤولية عن إبقاء الرابط ظاهراً.
 // ============================================================
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,7 +29,7 @@ import {
 } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
-export function NotificationBell({ enabled }: { enabled: boolean }) {
+export const NotificationBell = memo(function NotificationBell({ enabled }: { enabled: boolean }) {
   const [open, setOpen] = useState(false);
   const [, setLocation] = useLocation();
   const qc = useQueryClient();
@@ -38,15 +38,18 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     query: {
       queryKey: getGetUnreadCountQueryKey(),
       enabled,
-      refetchInterval: 6000,
-      refetchOnWindowFocus: true,
+      // ✅ FIX: رفع من 6 ثوان → 30 ثانية
+      // كل 6 ثوان كان يُطلق طلب شبكة + تحديث state → re-render للصفحة الرئيسية
+      refetchInterval: 30000,
+      refetchOnWindowFocus: false,
     },
   });
   const { data: list } = useListMyNotifications({
     query: {
       queryKey: getListMyNotificationsQueryKey(),
       enabled: enabled && open,
-      refetchInterval: open ? 8000 : false,
+      // ✅ FIX: تقليل من 8s → 20s عند فتح قائمة الإشعارات
+      refetchInterval: open ? 20000 : false,
     },
   });
   const markAll = useMarkAllRead();
@@ -70,7 +73,6 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
         {count > 0 && (
           <motion.span
             initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
             className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-pink-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-pink-600"
           >
             {count > 9 ? "9+" : count}
@@ -81,15 +83,11 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setOpen(false)}
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center"
           >
             <motion.div
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
               exit={{ y: 60, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-md max-h-[85vh] overflow-hidden bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col"
@@ -188,4 +186,4 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
       </AnimatePresence>
     </>
   );
-}
+});

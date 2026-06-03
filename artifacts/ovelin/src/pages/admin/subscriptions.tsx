@@ -262,8 +262,6 @@ export default function AdminSubscriptions() {
           <AnimatePresence>
             {showForm && (
               <motion.div
-                initial={{ opacity: 0, y: -12 }}
-                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 className="bg-white rounded-2xl border border-pink-200 p-4 shadow-sm space-y-2"
               >
@@ -459,8 +457,6 @@ export default function AdminSubscriptions() {
               {subs.map((sub) => (
                 <motion.div
                   key={sub.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
                   className="fancy-card rounded-2xl overflow-hidden"
                 >
                   <div className="bg-gradient-to-l from-pink-50 to-rose-50 px-3 py-2 flex items-center justify-between border-b border-pink-100">
@@ -548,8 +544,6 @@ function PlanCard({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
       className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${
         plan.active ? "border-pink-100" : "border-zinc-200 opacity-70"
       }`}

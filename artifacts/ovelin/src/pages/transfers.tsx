@@ -186,8 +186,6 @@ export default function TransfersPage() {
           {tab === "send" && (
             <motion.div
               key="send"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               className="fancy-card rounded-3xl p-4 space-y-3"
             >
@@ -250,8 +248,6 @@ export default function TransfersPage() {
           {tab === "history" && (
             <motion.div
               key="hist"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               className="fancy-card rounded-3xl p-4"
             >
@@ -318,8 +314,6 @@ export default function TransfersPage() {
           {tab === "giftcard" && (
             <motion.div
               key="gift"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               className="space-y-3"
             >
@@ -356,10 +350,12 @@ export default function TransfersPage() {
                   value={gAmount}
                   onChange={(e) => setGAmount(e.target.value)}
                   type="number"
+                  inputMode="decimal"
                   min="1"
                   step="0.01"
                   placeholder="المبلغ ($)"
-                  className="w-full rounded-2xl border border-pink-200 bg-pink-50/40 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  dir="ltr"
+                  className="w-full rounded-2xl border border-pink-200 bg-pink-50/40 px-4 py-3 text-sm text-left focus:outline-none focus:ring-2 focus:ring-pink-400"
                 />
                 <input
                   value={gMessage}

@@ -299,8 +299,6 @@ export default function LoungePage() {
             {tab === "rewards" && (
               <motion.div
                 key="rewards"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 className="space-y-3"
               >
@@ -398,8 +396,6 @@ export default function LoungePage() {
             {tab === "draws" && (
               <motion.div
                 key="draws"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 className="space-y-3"
               >
@@ -421,8 +417,6 @@ export default function LoungePage() {
             {tab === "achievements" && (
               <motion.div
                 key="ach"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 className="grid grid-cols-2 gap-3"
               >
@@ -435,8 +429,6 @@ export default function LoungePage() {
             {tab === "leaderboard" && (
               <motion.div
                 key="lead"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 className="space-y-3"
               >
@@ -512,8 +504,6 @@ export default function LoungePage() {
             {tab === "travel" && (
               <motion.div
                 key="travel"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 className="space-y-3"
               >
@@ -604,7 +594,6 @@ function MonthlyGoalCard({
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${data.progress}%` }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
               className="h-full bg-gradient-to-r from-pink-500 to-rose-600 rounded-full"
             />
           </div>

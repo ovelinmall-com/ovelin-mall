@@ -14,16 +14,25 @@
 // صاحب المشروع يتحمل كامل المسؤولية عن إبقاء الرابط ظاهراً.
 // ============================================================
 
-import { memo } from "react";
-import { useRealtime } from "@/lib/realtime";
+import { db, notificationsTable } from "@workspace/db";
+import { logger } from "../logger";
 
-export const OnlineBadge = memo(function OnlineBadge() {
-  const { online, connected } = useRealtime();
-  if (!connected) return null;
-  return (
-    <div className="inline-flex items-center gap-1.5 text-[10px] text-pink-600 bg-white/90 dark:bg-zinc-900/90 px-2 py-0.5 rounded-full backdrop-blur">
-      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-      {online} متصل الآن
-    </div>
-  );
-});
+export async function notify(
+  userId: number,
+  type: string,
+  title: string,
+  message: string,
+  link?: string | null,
+): Promise<void> {
+  try {
+    await db.insert(notificationsTable).values({
+      userId,
+      type,
+      title,
+      message,
+      link: link ?? null,
+    });
+  } catch (err) {
+    logger.warn({ err }, "notify failed");
+  }
+}

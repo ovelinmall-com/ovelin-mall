@@ -260,8 +260,6 @@ export default function SupportListPage() {
         {filtered.map((t, i) => (
           <Link key={t.id} href={`/support/${t.id}`}>
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(i * 0.04, 0.4) }}
               className="fancy-card rounded-3xl p-4 active:scale-[0.99] transition cursor-pointer"
             >

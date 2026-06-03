@@ -106,8 +106,6 @@ export default function NotificationsPage() {
             {list.map((n) => {
               const Inner = (
                 <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
                   className={cn(
                     "rounded-2xl p-4 border flex gap-3 active:scale-[0.99] transition",
                     n.read ? "bg-white border-pink-100" : "bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200",

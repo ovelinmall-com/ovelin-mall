@@ -151,7 +151,6 @@ function FloatingStars() {
         return (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: [0, 0.9, 0], y: [-2, -16, -28] }}
             transition={{
               duration: 4 + (i % 3),
@@ -366,8 +365,6 @@ export default function Account() {
                 {user.username[0]}
                 {isVip && (
                   <motion.div
-                    initial={{ y: -4, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
                     className="absolute -top-5 left-1/2 -translate-x-1/2 text-2xl drop-shadow-lg"
                   >
                     👑
@@ -400,7 +397,6 @@ export default function Account() {
                   strokeDasharray="289"
                   initial={{ strokeDashoffset: 289 }}
                   animate={{ strokeDashoffset: 289 - (289 * tier.progress) / 100 }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
                 />
                 <defs>
                   <linearGradient id="vipGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -443,8 +439,6 @@ export default function Account() {
       {/* FLOATING ACTION CHIPS */}
       <div className="px-4 -mt-12 pb-2">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
           className="fancy-card rounded-3xl /85 backdrop-blur-xl shadow-[0_20px_50px_-15px_rgba(236,72,153,0.45)] p-3"
         >
           <div className="grid grid-cols-4 gap-2">
@@ -546,8 +540,6 @@ export default function Account() {
       <div className="px-5 space-y-3 pb-4">
         {/* ⭐ REFERRAL — أبرز عنصر في الصفحة */}
         <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
             className="relative rounded-3xl overflow-hidden shadow-[0_16px_40px_-10px_rgba(236,72,153,0.5)]"
           >
             {/* خلفية متدرجة */}

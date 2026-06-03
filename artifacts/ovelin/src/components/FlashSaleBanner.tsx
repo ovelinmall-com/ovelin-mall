@@ -14,23 +14,30 @@
 // صاحب المشروع يتحمل كامل المسؤولية عن إبقاء الرابط ظاهراً.
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { memo } from "react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatSDG } from "@/lib/utils";
 import { CountdownTimer } from "./CountdownTimer";
 
 type Sale = { id: number; productId: number; productName: string; price: string; imageUrl: string | null; discountPct: number; endsAt: string };
 
-export function FlashSaleBanner() {
-  const [sales, setSales] = useState<Sale[]>([]);
-  useEffect(() => {
-    const load = () => api<Sale[]>("/api/flash-sales/active").then(setSales).catch(() => setSales([]));
-    load();
-    const t = setInterval(load, 30000);
-    return () => clearInterval(t);
-  }, []);
+// ✅ FIX: استبدلنا useState + useEffect + setInterval اليدوي بـ React Query
+// React Query يوفر: caching تلقائي + deduplication + لا تكرار للطلبات
+// كان قبلاً يُطلق نسختين مستقلتين من polling في كل مكوّن مثبَّت
+export const FlashSaleBanner = memo(function FlashSaleBanner() {
+  const { data: sales = [] } = useQuery<Sale[]>({
+    queryKey: ["flash-sales-active"],
+    queryFn: () => api<Sale[]>("/api/flash-sales/active"),
+    staleTime: 60_000,
+    // ✅ FIX: رفع من 30s → 60s لتقليل طلبات الشبكة
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
   if (!sales.length) return null;
+
   return (
     <div className="mx-4 my-3 rounded-2xl overflow-hidden bg-gradient-to-r from-pink-500 via-pink-600 to-pink-600 text-white shadow-lg shadow-pink-500/30">
       <div className="px-4 py-2.5 flex items-center justify-between">
@@ -46,7 +53,7 @@ export function FlashSaleBanner() {
           return (
             <Link key={s.id} href={`/product/${s.productId}`} className="snap-start shrink-0 w-28 bg-white/10 backdrop-blur rounded-xl overflow-hidden">
               <div className="aspect-square bg-white/10 flex items-center justify-center">
-                {s.imageUrl ? <img src={s.imageUrl} alt={s.productName} className="w-full h-full object-cover" /> : <span className="text-3xl">🔥</span>}
+                {s.imageUrl ? <img src={s.imageUrl} alt={s.productName} className="w-full h-full object-cover" loading="lazy" /> : <span className="text-3xl">🔥</span>}
               </div>
               <div className="p-2">
                 <div className="text-[10px] line-clamp-2 leading-tight">{s.productName}</div>
@@ -61,4 +68,4 @@ export function FlashSaleBanner() {
       </div>
     </div>
   );
-}
+});

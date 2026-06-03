@@ -14,6 +14,7 @@
 // صاحب المشروع يتحمل كامل المسؤولية عن إبقاء الرابط ظاهراً.
 // ============================================================
 
+import { memo } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Home, Newspaper, ShoppingBag, Wallet, User, LifeBuoy } from "lucide-react";
@@ -23,7 +24,6 @@ import { useGetSupportUnreadCount, getGetSupportUnreadCountQueryKey } from "@wor
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 
-// ── Chunk preload map (حل ١: Preload JS عند التحويم) ──────────────
 const PAGE_CHUNKS: Record<string, () => Promise<unknown>> = {
   "/":        () => import("@/pages/home"),
   "/posts":   () => import("@/pages/posts"),
@@ -33,7 +33,6 @@ const PAGE_CHUNKS: Record<string, () => Promise<unknown>> = {
   "/support": () => import("@/pages/support"),
 };
 
-// ── Data prefetch map (حل ٢: Prefetch البيانات عند التحويم) ──────
 const DATA_PREFETCH: Record<string, (qc: ReturnType<typeof useQueryClient>, user: unknown) => void> = {
   "/wallet": (qc, user) => {
     if (!user) return;
@@ -56,7 +55,7 @@ function preload(href: string, qc: ReturnType<typeof useQueryClient>, user: unkn
   DATA_PREFETCH[href]?.(qc, user);
 }
 
-export function BottomNav() {
+export const BottomNav = memo(function BottomNav() {
   const [location] = useLocation();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -65,8 +64,9 @@ export function BottomNav() {
     query: {
       queryKey: getGetSupportUnreadCountQueryKey(),
       enabled: !!user,
-      refetchInterval: 15000,
-      refetchOnWindowFocus: true,
+      // ✅ FIX: رفع من 15s → 30s لتقليل طلبات الشبكة وre-renders
+      refetchInterval: 30000,
+      refetchOnWindowFocus: false,
     },
   });
   const supportUnread = unread?.count ?? 0;
@@ -90,15 +90,13 @@ export function BottomNav() {
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <div className="w-full max-w-md pointer-events-auto px-3 pb-3">
         <div className="relative">
-          {/* Subtle outer glow */}
           <div className="pointer-events-none absolute -inset-px rounded-[28px] bg-gradient-to-tr from-pink-500/20 via-rose-500/10 to-fuchsia-500/20 blur-xl" />
 
-          <div className="relative rounded-[28px] bg-white/75 dark:bg-card/75 backdrop-blur-2xl border border-white/60 ring-1 ring-pink-200/60 shadow-[0_18px_50px_-12px_rgba(190,24,93,0.45)] overflow-visible">
-            {/* Top hairline highlight */}
+          {/* ✅ FIX: خفّفنا backdrop-blur من 2xl → lg لتخفيف عبء الرسم */}
+          <div className="relative rounded-[28px] bg-white/80 dark:bg-card/80 backdrop-blur-lg border border-white/60 ring-1 ring-pink-200/60 shadow-[0_12px_30px_-10px_rgba(190,24,93,0.35)] overflow-visible">
             <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-pink-300/70 to-transparent" />
 
             <div className="relative grid grid-cols-5 items-end h-[70px] px-2">
-              {/* Left items */}
               {left.map((item) => (
                 <NavItem
                   key={item.href}
@@ -108,7 +106,7 @@ export function BottomNav() {
                 />
               ))}
 
-              {/* Center floating Home button */}
+              {/* ✅ FIX: استبدلنا animate بـ CSS translate ثابت لتجنب framer-motion spring المستمر */}
               <div className="relative flex justify-center">
                 <Link
                   href="/"
@@ -117,12 +115,9 @@ export function BottomNav() {
                 >
                   <motion.div
                     whileTap={{ scale: 0.92 }}
-                    initial={false}
-                    animate={{ y: homeActive ? -22 : -16 }}
-                    transition={{ type: "spring", stiffness: 380, damping: 22 }}
                     className="relative"
+                    style={{ transform: homeActive ? "translateY(-22px)" : "translateY(-16px)", transition: "transform 0.2s ease" }}
                   >
-                    {/* Glow halo */}
                     <div
                       className={cn(
                         "absolute inset-0 rounded-full blur-xl transition-opacity",
@@ -131,7 +126,7 @@ export function BottomNav() {
                           : "bg-pink-500/40 opacity-70",
                       )}
                     />
-                    <div className="relative w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-pink-400 via-rose-500 to-fuchsia-500 shadow-[0_15px_35px_-8px_rgba(236,72,153,0.7)]">
+                    <div className="relative w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-pink-400 via-rose-500 to-fuchsia-500 shadow-[0_10px_25px_-8px_rgba(236,72,153,0.6)]">
                       <div className="w-full h-full rounded-full bg-gradient-to-br from-pink-600 via-rose-600 to-pink-700 flex items-center justify-center text-white">
                         <Home className="w-7 h-7 drop-shadow" />
                       </div>
@@ -148,7 +143,6 @@ export function BottomNav() {
                 </span>
               </div>
 
-              {/* Right items */}
               {right.map((item) => (
                 <NavItem
                   key={item.href}
@@ -159,7 +153,6 @@ export function BottomNav() {
               ))}
             </div>
 
-            {/* Floating support pill — separate row */}
             <Link
               href={support.href}
               onMouseEnter={() => preload(support.href, qc, user)}
@@ -170,8 +163,8 @@ export function BottomNav() {
                 className={cn(
                   "absolute -top-3 right-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10.5px] font-extrabold shadow-lg border transition-colors",
                   isActive(support.href)
-                    ? "bg-gradient-to-br from-pink-600 to-rose-700 text-white border-white/40 shadow-[0_10px_25px_-6px_rgba(190,24,93,0.6)]"
-                    : "bg-white text-pink-700 border-pink-200 shadow-[0_8px_20px_-6px_rgba(190,24,93,0.4)]",
+                    ? "bg-gradient-to-br from-pink-600 to-rose-700 text-white border-white/40 shadow-[0_8px_20px_-6px_rgba(190,24,93,0.55)]"
+                    : "bg-white text-pink-700 border-pink-200 shadow-[0_6px_16px_-6px_rgba(190,24,93,0.3)]",
                 )}
               >
                 <LifeBuoy className="w-3.5 h-3.5" />
@@ -188,9 +181,9 @@ export function BottomNav() {
       </div>
     </div>
   );
-}
+});
 
-function NavItem({
+const NavItem = memo(function NavItem({
   item,
   active,
   onPreload,
@@ -215,7 +208,7 @@ function NavItem({
           className={cn(
             "relative p-2 rounded-2xl transition-all duration-300",
             active
-              ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-[0_8px_18px_-4px_rgba(236,72,153,0.55)]"
+              ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-[0_6px_14px_-4px_rgba(236,72,153,0.5)]"
               : "text-pink-500/80",
           )}
         >
@@ -243,4 +236,4 @@ function NavItem({
       )}
     </Link>
   );
-}
+});

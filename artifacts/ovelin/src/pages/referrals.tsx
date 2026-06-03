@@ -149,8 +149,6 @@ export default function ReferralsPage() {
       <div className="px-5 space-y-4 pb-4">
         {/* Hero card */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-pink-500 via-pink-600 to-rose-700 p-6 text-white shadow-[0_20px_50px_-15px_rgba(190,24,93,0.6)]"
         >
           <div className="absolute -top-10 -left-10 w-44 h-44 bg-red-600/20 rounded-full blur-3xl" />
@@ -265,7 +263,6 @@ export default function ReferralsPage() {
                       <motion.div
                         initial={{ height: 0 }}
                         animate={{ height: h }}
-                        transition={{ duration: 0.5 }}
                         className="w-full rounded-t-lg bg-gradient-to-t from-pink-500 to-rose-400"
                         title={`$${v.toFixed(2)}`}
                       />

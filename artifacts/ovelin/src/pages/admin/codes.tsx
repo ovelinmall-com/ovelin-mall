@@ -371,8 +371,6 @@ function CodesPanel({ product, onClose }: { product: Product; onClose: () => voi
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
       <motion.div
-        initial={{ y: 30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
         className="w-full sm:max-w-2xl max-h-[92vh] bg-white sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col"
         dir="rtl"
         data-testid="panel-codes-manager"
@@ -411,7 +409,6 @@ function CodesPanel({ product, onClose }: { product: Product; onClose: () => voi
         {/* Add form */}
         {showAdd && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             className="overflow-hidden border-b border-pink-100 bg-pink-50/50"
           >

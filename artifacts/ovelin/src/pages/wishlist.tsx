@@ -90,8 +90,6 @@ export default function WishlistPage() {
             {list.map((p) => (
               <motion.div
                 key={p.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
                 className="fancy-card rounded-3xl p-3 relative overflow-hidden"
               >
                 <button

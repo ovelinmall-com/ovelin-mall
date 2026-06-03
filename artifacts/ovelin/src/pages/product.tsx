@@ -163,8 +163,6 @@ export default function ProductPage() {
       <div className="px-5 space-y-4">
         {/* Hero */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
           className={`relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br ${meta?.gradient ?? "from-pink-500 to-rose-600"} text-white shadow-[0_15px_40px_-10px_rgba(190,24,93,0.5)]`}
         >
           <div className="absolute -top-6 -left-6 w-32 h-32 bg-red-500/20 rounded-full blur-2xl" />

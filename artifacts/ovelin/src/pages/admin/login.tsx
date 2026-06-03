@@ -53,8 +53,6 @@ export default function AdminLogin() {
     <div className="min-h-[100dvh] flex flex-col">
       <div className="flex-1 flex flex-col justify-center px-6 py-10">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8 text-white"
         >
           <div className="inline-flex p-4 rounded-3xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-[0_15px_50px_-10px_rgba(255,61,138,0.7)]">

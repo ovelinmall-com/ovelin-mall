@@ -18,19 +18,27 @@ import { api } from "./api";
 import { getSessionKey } from "./realtime";
 
 let queue: any[] = [];
-let timer: any = null;
+let timer: ReturnType<typeof setTimeout> | null = null;
 
+// ✅ FIX: إرسال دفعة واحدة بدلاً من طلب HTTP منفصل لكل حدث
+// كان flush() يُطلق N طلب شبكة بدلاً من طلب واحد للدفعة كلها
 function flush() {
   if (!queue.length) return;
-  const batch = queue;
-  queue = [];
-  for (const ev of batch) {
-    api("/api/analytics/track", {
-      method: "POST",
-      headers: { "x-session-key": getSessionKey() },
-      body: JSON.stringify(ev),
-    }).catch(() => { /* ignore */ });
-  }
+  const batch = queue.splice(0, queue.length);
+  api("/api/analytics/track-batch", {
+    method: "POST",
+    headers: { "x-session-key": getSessionKey() },
+    body: JSON.stringify({ events: batch }),
+  }).catch(() => {
+    // fallback: أرسل الحوادث بشكل فردي عبر الـ endpoint الأصلي
+    for (const ev of batch) {
+      api("/api/analytics/track", {
+        method: "POST",
+        headers: { "x-session-key": getSessionKey() },
+        body: JSON.stringify(ev),
+      }).catch(() => { /* ignore */ });
+    }
+  });
 }
 
 export function track(type: string, extra: Record<string, any> = {}): void {

@@ -64,16 +64,12 @@ export function ChangePasswordModal({
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
         >
           <motion.form
             onSubmit={submit}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
             exit={{ y: 20, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl"

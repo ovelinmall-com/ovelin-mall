@@ -277,8 +277,6 @@ export default function OrdersPage() {
           return (
             <motion.div
               key={o.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.02 }}
               className="fancy-card rounded-3xl p-4"
             >
@@ -383,15 +381,11 @@ function OrderTimelineDrawer({
     <AnimatePresence>
       {enabled && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
         >
           <motion.div
-            initial={{ y: 60, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
             exit={{ y: 60, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md max-h-[90vh] overflow-hidden bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col"

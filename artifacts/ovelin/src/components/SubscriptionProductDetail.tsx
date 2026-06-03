@@ -246,8 +246,6 @@ export function SubscriptionProductDetail({ product }: { product: Product }) {
     <div className="pb-28">
       {/* ─── Hero ─── */}
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
         className={`relative bg-gradient-to-br ${brand.bg} overflow-hidden`}
       >
         {/* back button */}
@@ -273,8 +271,6 @@ export function SubscriptionProductDetail({ product }: { product: Product }) {
         <div className="px-5 pt-12 pb-10 relative z-10 flex flex-col items-center text-center">
           {/* ─── Big Logo — popping out ─── */}
           <motion.div
-            initial={{ scale: 0.55, opacity: 0, y: 28 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 190, damping: 18, delay: 0.05 }}
             className="relative mb-5"
           >
@@ -361,9 +357,6 @@ export function SubscriptionProductDetail({ product }: { product: Product }) {
       {/* ─── Quick Stats ─── */}
       <div className="px-5 -mt-3 relative z-20">
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
           className="grid grid-cols-3 gap-2"
         >
           <div className="rounded-2xl bg-white border border-pink-100 p-3 text-center shadow-sm">
@@ -387,9 +380,6 @@ export function SubscriptionProductDetail({ product }: { product: Product }) {
       {/* ─── Description ─── */}
       {product.description && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
           className="mx-5 mt-4 rounded-2xl bg-pink-50/60 border border-pink-100 p-4"
         >
           <p className="text-sm text-pink-900 leading-relaxed">{product.description}</p>
@@ -398,9 +388,6 @@ export function SubscriptionProductDetail({ product }: { product: Product }) {
 
       {/* ─── What's Included ─── */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
         className="mx-5 mt-4 rounded-3xl bg-white border border-pink-100 p-4 shadow-sm"
       >
         <div className="flex items-center gap-2 mb-3">
@@ -419,9 +406,6 @@ export function SubscriptionProductDetail({ product }: { product: Product }) {
 
       {/* ─── Order Form ─── */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
         className="mx-5 mt-4 rounded-3xl bg-white border border-pink-100 p-4 shadow-sm"
       >
         <div className="font-bold text-pink-900 mb-1">بيانات التفعيل</div>

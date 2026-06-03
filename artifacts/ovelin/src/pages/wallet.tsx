@@ -177,9 +177,9 @@ const MOBILE_WITHDRAW_METHODS = [
   { id: "mtn", label: "رصيد MTN", emoji: "🔴" },
 ];
 const WALLET_WITHDRAW_METHODS = [
-  { id: "okash", label: "أوكاش", emoji: "💳" },
-  { id: "mycash", label: "ماي كاشي", emoji: "💰" },
-  { id: "binance", label: "باينانس", emoji: "🟡" },
+  { id: "okash",   label: "أوكاش",    icon: "/payment/ocash.jpg" },
+  { id: "mycash",  label: "ماي كاشي", icon: "/payment/cashi.jpg" },
+  { id: "binance", label: "باينانس",  icon: "/payment/binance.jpg" },
 ];
 const MOBILE_WITHDRAW_IDS = new Set(["sudanese", "zain", "mtn"]);
 const MIN_REFERRAL_WITHDRAW = 2000;
@@ -507,8 +507,6 @@ export default function WalletPage() {
         {/* VIP + Cashback combo */}
         {h && (
           <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
             className={cn(
               "relative overflow-hidden rounded-3xl p-4 text-white shadow-lg bg-gradient-to-br",
               VIP_GRADIENT[h.vip.current] ?? VIP_GRADIENT.Bronze,
@@ -540,7 +538,6 @@ export default function WalletPage() {
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${h.vip.progressPct}%` }}
-                    transition={{ duration: 0.8 }}
                     className="h-full bg-white rounded-full shadow"
                   />
                 </div>
@@ -601,8 +598,6 @@ export default function WalletPage() {
           {tab === "deposit" ? (
             <motion.div
               key="dep"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               className="space-y-4"
             >
@@ -665,7 +660,6 @@ export default function WalletPage() {
                           <div className="flex-1 h-0.5 mx-1 rounded-full overflow-hidden bg-white/20 mb-4">
                             <motion.div
                               animate={{ width: depositStep > s ? "100%" : "0%" }}
-                              transition={{ duration: 0.5, ease: "easeInOut" }}
                               className="h-full bg-white/80"
                             />
                           </div>
@@ -680,8 +674,6 @@ export default function WalletPage() {
                   <AnimatePresence>
                     {depositSuccess && (
                       <motion.div
-                        initial={{ opacity: 0, scale: 0.93, y: -8 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.93, y: -8 }}
                         className="rounded-2xl overflow-hidden"
                       >
@@ -700,9 +692,6 @@ export default function WalletPage() {
                   {depositStep === 1 && (
                     <motion.div
                       key="step1"
-                      initial={{ opacity: 0, x: 28 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.22 }}
                       className="space-y-3"
                     >
                       <div className="text-[11px] text-pink-500 font-bold text-center tracking-widest uppercase">اختر طريقة الدفع</div>
@@ -723,8 +712,6 @@ export default function WalletPage() {
                                 localStorage.setItem("ov_last_pm", m.id);
                                 setDepositStep(2);
                               }}
-                              initial={{ opacity: 0, y: 16 }}
-                              animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: idx * 0.07 }}
                               whileHover={{ y: -4, scale: 1.015 }}
                               whileTap={{ scale: 0.97 }}
@@ -763,7 +750,6 @@ export default function WalletPage() {
                                     {isLast && (
                                       <motion.span
                                         initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
                                         className="text-[9px] bg-white/25 border border-white/30 rounded-full px-2 py-0.5 font-bold flex items-center gap-1"
                                       >
                                         <Star className="w-2.5 h-2.5 fill-white text-white" /> الأخيرة
@@ -800,9 +786,6 @@ export default function WalletPage() {
                     return (
                       <motion.div
                         key="step2"
-                        initial={{ opacity: 0, x: 28 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.22 }}
                         className="space-y-4"
                       >
                         <button type="button" onClick={() => setDepositStep(1)}
@@ -867,47 +850,30 @@ export default function WalletPage() {
                         {/* Amount entry card */}
                         <div className="rounded-3xl bg-white border border-pink-100 shadow-sm overflow-hidden">
 
-                          {/* ── Amount input (phone native keyboard) ── */}
-                          <div className="px-5 pt-5 pb-2 text-center">
-                            <div className="text-[10px] text-pink-400 font-black uppercase tracking-[0.18em] mb-3">المبلغ المُراد شحنه</div>
-
-                            {/* Large centered input — triggers phone numeric keyboard */}
-                            <label className="relative flex flex-col items-center cursor-text">
-                              <div className="relative w-full flex items-end justify-center gap-2 min-h-[72px]">
-                                <input
-                                  type="text"
-                                  inputMode="decimal"
-                                  pattern="[0-9]*\.?[0-9]*"
-                                  value={amount}
-                                  onChange={(e) => {
-                                    const val = e.target.value.replace(/[^0-9.]/g, "");
-                                    if (/^\d*\.?\d{0,2}$/.test(val) && val.replace(".", "").length <= 7)
-                                      setAmount(val);
-                                  }}
-                                  placeholder="0"
-                                  autoComplete="off"
-                                  className={cn(
-                                    "w-full font-black tabular-nums text-center bg-transparent border-none outline-none caret-pink-400 transition-all duration-150 leading-tight",
-                                    !amount
-                                      ? "text-6xl text-pink-200 placeholder:text-pink-200"
-                                      : amount.length > 6
-                                      ? "text-3xl text-pink-900"
-                                      : amount.length > 4
-                                      ? "text-4xl text-pink-900"
-                                      : "text-6xl text-pink-900"
-                                  )}
-                                />
-                              </div>
-                              <div className="flex items-center gap-2 mt-1 mb-1">
-                                <span className="text-pink-300 font-bold text-base">ج.س</span>
-                                <span className="text-[9px] text-pink-200 font-semibold tracking-wider">• اضغط للإدخال</span>
-                              </div>
-                            </label>
+                          {/* ── Amount input ── */}
+                          <div className="px-5 pt-5 pb-2">
+                            <div className="text-[10px] text-pink-400 font-black uppercase tracking-[0.18em] mb-2">المبلغ المُراد شحنه</div>
+                            <div className="relative flex items-center gap-2 rounded-2xl border border-pink-200 bg-pink-50/60 px-4 py-3 focus-within:border-pink-400 focus-within:ring-2 focus-within:ring-pink-100 transition-all">
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                value={amount}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/[^0-9.]/g, "");
+                                  if (/^\d*\.?\d{0,2}$/.test(val) && val.replace(".", "").length <= 7)
+                                    setAmount(val);
+                                }}
+                                placeholder="أدخل المبلغ"
+                                autoComplete="off"
+                                dir="ltr"
+                                className="flex-1 bg-transparent border-none outline-none text-base font-bold text-pink-900 placeholder:text-pink-300 text-left caret-pink-500"
+                              />
+                              <span className="text-pink-400 font-bold text-sm shrink-0">ج.س</span>
+                            </div>
 
                             <AnimatePresence>
                               {newBalance && (
                                 <motion.div
-                                  initial={{ opacity: 0, y: 6, height: 0 }}
                                   animate={{ opacity: 1, y: 0, height: "auto" }}
                                   exit={{ opacity: 0, y: -4, height: 0 }}
                                   className="mt-2 overflow-hidden"
@@ -964,9 +930,6 @@ export default function WalletPage() {
                     return (
                       <motion.div
                         key="step3"
-                        initial={{ opacity: 0, x: 28 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.22 }}
                         className="space-y-4"
                       >
                         <button type="button" onClick={() => setDepositStep(2)}
@@ -1000,7 +963,7 @@ export default function WalletPage() {
                             <div className="text-sm font-black text-pink-900">صورة الإيصال</div>
                             <AnimatePresence>
                               {receiptBase64 && (
-                                <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }}
+                                <motion.div
                                   className="flex items-center gap-1 text-emerald-600">
                                   <CheckCircle2 className="w-4 h-4" />
                                   <span className="text-xs font-bold">جاهز ✓</span>
@@ -1012,8 +975,6 @@ export default function WalletPage() {
                           <AnimatePresence mode="wait">
                             {receiptPreview ? (
                               <motion.div key="preview"
-                                initial={{ opacity: 0, scale: 0.92 }}
-                                animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.92 }}
                                 className="relative"
                               >
@@ -1037,8 +998,6 @@ export default function WalletPage() {
                               </motion.div>
                             ) : (
                               <motion.label key="uploader" htmlFor="receipt-upload"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 className="block cursor-pointer"
                               >
@@ -1093,7 +1052,7 @@ export default function WalletPage() {
                         </div>
 
                         {depositError && (
-                          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          <motion.div
                             className="rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs p-3 flex gap-2">
                             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                             <div>{depositError}</div>
@@ -1146,8 +1105,6 @@ export default function WalletPage() {
           ) : (
             <motion.div
               key="wd"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               className="space-y-3"
             >
@@ -1237,15 +1194,21 @@ export default function WalletPage() {
                           type="button"
                           onClick={() => { setWMethodId(m.id); setWErr(null); }}
                           className={cn(
-                            "rounded-2xl py-2.5 px-1 text-xs font-bold transition border flex flex-col items-center gap-0.5",
+                            "rounded-2xl py-2.5 px-1 text-xs font-bold transition border flex flex-col items-center gap-1.5",
                             wMethodId === m.id
-                              ? "border-transparent text-white shadow-md"
-                              : "bg-pink-50/40 border-pink-200 text-pink-700",
+                              ? "border-pink-500 shadow-md bg-pink-50"
+                              : "bg-white border-pink-200 text-pink-700",
                           )}
-                          style={wMethodId === m.id ? { background: "linear-gradient(135deg,#f43f5e,#e11d48)" } : {}}
                         >
-                          <span className="text-base">{m.emoji}</span>
-                          <span>{m.label}</span>
+                          <img
+                            src={m.icon}
+                            alt={m.label}
+                            className={cn(
+                              "w-10 h-10 rounded-xl object-cover shadow-sm transition",
+                              wMethodId === m.id ? "ring-2 ring-pink-500" : "",
+                            )}
+                          />
+                          <span className={wMethodId === m.id ? "text-pink-700" : ""}>{m.label}</span>
                         </button>
                       ))}
                     </div>
@@ -1371,9 +1334,11 @@ export default function WalletPage() {
                       onChange={(e) => setWAmount(e.target.value)}
                       required
                       type="number"
+                      inputMode="decimal"
                       min={MIN_REFERRAL_WITHDRAW}
                       step="1"
-                      className="mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/40 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                      dir="ltr"
+                      className="mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/40 px-4 py-3 text-sm text-left focus:outline-none focus:ring-2 focus:ring-pink-400"
                       placeholder={`${MIN_REFERRAL_WITHDRAW.toLocaleString()}.00`}
                     />
                     <div className="mt-1 flex items-center justify-between text-[10px]">
@@ -1481,8 +1446,6 @@ export default function WalletPage() {
           {/* Empty state */}
           {(!filteredTx || filteredTx.length === 0) && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
               className="text-center py-12 bg-white rounded-3xl border border-pink-100 shadow-sm"
             >
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-100 flex items-center justify-center mx-auto mb-3 shadow-inner">
@@ -1534,8 +1497,6 @@ export default function WalletPage() {
                 <motion.button
                   key={t.id}
                   onClick={() => setOpenTx(t)}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.04, type: "spring", stiffness: 320, damping: 26 }}
                   whileTap={{ scale: 0.978 }}
                   className="w-full text-right bg-white rounded-2xl border border-pink-100/80 shadow-sm hover:shadow-md hover:border-pink-200 transition-all duration-200 overflow-hidden"
@@ -1680,8 +1641,6 @@ function BalanceCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 200, damping: 22 }}
       className="relative overflow-hidden rounded-[2rem] text-white select-none"
       style={{
@@ -1708,10 +1667,8 @@ function BalanceCard({
       <AnimatePresence>
         {shimmer && (
           <motion.div
-            initial={{ x: "-100%", opacity: 0.6 }}
             animate={{ x: "200%", opacity: 0 }}
             exit={{}}
-            transition={{ duration: 0.85, ease: "easeOut" }}
             className="absolute inset-0 w-1/3"
             style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)", zIndex: 10 }}
           />
@@ -1763,7 +1720,6 @@ function BalanceCard({
             <motion.button
               onClick={onRefresh}
               whileTap={{ rotate: 360 }}
-              transition={{ duration: 0.4 }}
               className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-90 transition"
             >
               <RefreshCcw className="w-3.5 h-3.5" />
@@ -1819,7 +1775,6 @@ function BalanceCard({
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${spentPct}%` }}
-                  transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
                   className="h-full rounded-full"
                   style={{
                     background: spentPct > 80
@@ -1843,7 +1798,6 @@ function BalanceCard({
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, 100 - spentPct)}%` }}
-                    transition={{ duration: 1.2, ease: "easeOut", delay: 0.5 }}
                     className="h-full rounded-full"
                     style={{ background: "linear-gradient(90deg,#818cf8,#c084fc)" }}
                   />
@@ -2055,15 +2009,11 @@ function TxDetailModal({ tx, onClose }: { tx: any; onClose: () => void }) {
   };
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ y: 40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
         exit={{ y: 40, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-3xl w-full max-w-md p-5 shadow-2xl"

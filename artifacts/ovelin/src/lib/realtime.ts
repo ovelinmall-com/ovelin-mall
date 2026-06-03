@@ -25,7 +25,6 @@ export function getSessionKey(): string {
     sk = "s-" + Math.random().toString(36).slice(2, 12);
     try { localStorage.setItem(SK_KEY, sk); } catch { /* ignore */ }
   }
-  // Mirror to cookie so backend reads it
   if (typeof document !== "undefined") {
     document.cookie = `ovelin_sk=${sk}; path=/; max-age=31536000; SameSite=Lax`;
   }
@@ -34,68 +33,109 @@ export function getSessionKey(): string {
 
 export type RealtimeEvent = { event: string; payload: any };
 
+// ─────────────────────────────────────────────────────────────
+// SINGLETON WebSocket — الاتصال الوحيد المشترك بين جميع المكوّنات
+// هذا يمنع إنشاء عشرات الاتصالات عند استخدام useRealtime() في أكثر من مكوّن
+// ─────────────────────────────────────────────────────────────
+type Listener = (online: number, connected: boolean, ev?: RealtimeEvent) => void;
+
+let ws: WebSocket | null = null;
+let wsOnline = 0;
+let wsConnected = false;
+let pingTimer: ReturnType<typeof setInterval> | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let stopped = false;
+const listeners = new Set<Listener>();
+
+function notifyAll(ev?: RealtimeEvent) {
+  for (const fn of listeners) fn(wsOnline, wsConnected, ev);
+}
+
+function connect() {
+  if (stopped || ws) return;
+  try {
+    const sk = getSessionKey();
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+    const url = `${proto}//${location.host}${base}/api/ws?sk=${encodeURIComponent(sk)}`;
+    ws = new WebSocket(url);
+
+    ws.onopen = () => {
+      wsConnected = true;
+      notifyAll();
+      pingTimer = setInterval(() => {
+        try { ws?.send(JSON.stringify({ type: "ping" })); } catch { /* ignore */ }
+      }, 25000);
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === "online") { wsOnline = data.count; notifyAll(); }
+        else if (data.type === "hello") { wsOnline = data.online ?? 0; notifyAll(); }
+        else if (data.type === "event") notifyAll({ event: data.event, payload: data.payload });
+      } catch { /* ignore */ }
+    };
+
+    ws.onerror = () => { try { ws?.close(); } catch { /* ignore */ } };
+
+    ws.onclose = () => {
+      ws = null;
+      wsConnected = false;
+      if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+      notifyAll();
+      if (!stopped && listeners.size > 0) {
+        reconnectTimer = setTimeout(connect, 3000);
+      }
+    };
+  } catch {
+    if (!stopped && listeners.size > 0) {
+      reconnectTimer = setTimeout(connect, 5000);
+    }
+  }
+}
+
+function subscribe(fn: Listener) {
+  listeners.add(fn);
+  if (!ws && !reconnectTimer) connect();
+  fn(wsOnline, wsConnected);
+  return () => {
+    listeners.delete(fn);
+    if (listeners.size === 0) {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+      try { ws?.close(); } catch { /* ignore */ }
+      ws = null;
+    }
+  };
+}
+
+function sendToServer(data: any) {
+  try { ws?.send(JSON.stringify(data)); } catch { /* ignore */ }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Hook — يستخدم الاتصال المشترك بدون إنشاء اتصال جديد
+// ─────────────────────────────────────────────────────────────
 export function useRealtime(handler?: (ev: RealtimeEvent) => void): {
   online: number;
   connected: boolean;
   send: (data: any) => void;
 } {
-  const [online, setOnline] = useState(0);
-  const [connected, setConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
+  const [online, setOnline] = useState(wsOnline);
+  const [connected, setConnected] = useState(wsConnected);
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
 
   useEffect(() => {
-    const sk = getSessionKey();
-    const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-    const url = `${proto}//${location.host}${base}/api/ws?sk=${encodeURIComponent(sk)}`;
-    let stop = false;
-    let reconnectTimer: any = null;
-    let pingTimer: any = null;
-
-    const connect = () => {
-      if (stop) return;
-      try {
-        const ws = new WebSocket(url);
-        wsRef.current = ws;
-        ws.onopen = () => {
-          setConnected(true);
-          pingTimer = setInterval(() => {
-            try { ws.send(JSON.stringify({ type: "ping" })); } catch { /* ignore */ }
-          }, 25000);
-        };
-        ws.onmessage = (e) => {
-          try {
-            const data = JSON.parse(e.data);
-            if (data.type === "online") setOnline(data.count);
-            if (data.type === "hello") setOnline(data.online ?? 0);
-            if (data.type === "event" && handlerRef.current) handlerRef.current({ event: data.event, payload: data.payload });
-          } catch { /* ignore */ }
-        };
-        ws.onerror = () => { try { ws.close(); } catch { /* ignore */ } };
-        ws.onclose = () => {
-          setConnected(false);
-          if (pingTimer) clearInterval(pingTimer);
-          if (!stop) reconnectTimer = setTimeout(connect, 3000);
-        };
-      } catch {
-        if (!stop) reconnectTimer = setTimeout(connect, 5000);
-      }
-    };
-
-    connect();
-    return () => {
-      stop = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (pingTimer) clearInterval(pingTimer);
-      try { wsRef.current?.close(); } catch { /* ignore */ }
-    };
+    const unsubscribe = subscribe((o, c, ev) => {
+      setOnline(o);
+      setConnected(c);
+      if (ev && handlerRef.current) handlerRef.current(ev);
+    });
+    return unsubscribe;
   }, []);
 
-  const send = useCallback((data: any) => {
-    try { wsRef.current?.send(JSON.stringify(data)); } catch { /* ignore */ }
-  }, []);
-
+  const send = useCallback((data: any) => sendToServer(data), []);
   return { online, connected, send };
 }

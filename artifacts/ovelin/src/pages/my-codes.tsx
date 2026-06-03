@@ -159,8 +159,6 @@ export default function MyCodes() {
           {filtered.map((c, i) => (
             <motion.div
               key={c.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
               className="relative overflow-hidden rounded-2xl bg-white border-2 border-pink-200 shadow-sm"
               data-testid={`card-code-${c.id}`}
@@ -208,8 +206,6 @@ export default function MyCodes() {
                     {copiedId === c.id ? (
                       <motion.span
                         key="copied"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
                         className="flex items-center gap-1.5"
                       >
@@ -218,8 +214,6 @@ export default function MyCodes() {
                     ) : (
                       <motion.span
                         key="copy"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
                         className="flex items-center gap-1.5"
                       >

@@ -43,8 +43,6 @@ export default function Categories() {
           return (
             <motion.div
               key={cat.slug}
-              initial={{ opacity: 0, x: 12 }}
-              animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.04 }}
               whileTap={{ scale: 0.98 }}
             >

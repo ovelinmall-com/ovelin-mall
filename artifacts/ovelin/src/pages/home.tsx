@@ -16,7 +16,7 @@
 
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -137,7 +137,6 @@ function InlineCarousel() {
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={index}
-          initial={{ x: "100%", opacity: 0.4 }}
           animate={{ x: "0%", opacity: 1 }}
           exit={{ x: "-100%", opacity: 0.4 }}
           transition={{ duration: 0.7, ease: [0.4, 0.0, 0.2, 1] }}
@@ -202,7 +201,7 @@ function InlineCarousel() {
   );
 }
 
-function StatCard({
+const StatCard = memo(function StatCard({
   icon: Icon,
   value,
   label,
@@ -212,19 +211,15 @@ function StatCard({
   label: string;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl bg-white/15 backdrop-blur p-3 text-white"
-    >
+    <div className="rounded-2xl bg-white/15 p-3 text-white">
       <Icon className="w-5 h-5 mb-1.5 opacity-90" />
       <div className="text-xl font-extrabold tabular-nums">
         {value.toLocaleString("ar-EG")}
       </div>
       <div className="text-[11px] opacity-85">{label}</div>
-    </motion.div>
+    </div>
   );
-}
+});
 
 function SectionTitle({ title }: { title: string }) {
   return (
@@ -245,16 +240,12 @@ function MaintenanceModal({ name, onClose }: { name: string; onClose: () => void
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[999] flex items-end justify-center p-4"
         style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
         onClick={onClose}
       >
         <motion.div
-          initial={{ y: 80, opacity: 0, scale: 0.95 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: 80, opacity: 0, scale: 0.95 }}
           transition={{ type: "spring", stiffness: 320, damping: 28 }}
           onClick={(e) => e.stopPropagation()}
@@ -402,6 +393,8 @@ function ServiceCard({
             <img
               src={bgImage}
               alt={name}
+              loading="lazy"
+              decoding="async"
               className="absolute inset-0 w-full h-full object-cover"
               style={{ imageRendering: "auto" }}
               onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0"; }}
@@ -445,6 +438,8 @@ function ServiceCard({
               <img
                 src={logoUrl}
                 alt={name}
+                loading="lazy"
+                decoding="async"
                 onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0"; }}
                 className="w-[75%] h-[75%] object-contain"
                 style={{ opacity: 0.38 }}
@@ -457,6 +452,8 @@ function ServiceCard({
               <img
                 src={imageUrl}
                 alt={name}
+                loading="lazy"
+                decoding="async"
                 onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0"; }}
                 className="w-[130%] h-[130%] object-contain opacity-20 -translate-y-2 scale-110"
                 style={{ filter: "blur(0.5px)" }}
@@ -468,6 +465,8 @@ function ServiceCard({
               <img
                 src={imageUrl}
                 alt={name}
+                loading="lazy"
+                decoding="async"
                 onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0"; }}
                 className="w-20 h-20 object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.4)]"
                 style={{ filter: "brightness(0) invert(1)" }}
@@ -518,8 +517,6 @@ function ServiceCard({
         {/* ── Maintenance badge — شاكوش احترافي بدون ضبابية ── */}
         {inMaintenance && (
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 18 }}
             className="absolute top-2 left-2 z-20 flex items-center gap-1.5 rounded-full px-2.5 py-1.5 border border-white/30"
             style={{
@@ -635,8 +632,6 @@ function HorizontalRow({
           {expanded && extraItems?.map((it, i) => (
             <motion.div
               key={`extra-${i}`}
-              initial={{ opacity: 0, scale: 0.88 }}
-              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.88 }}
               transition={{ delay: i * 0.06 }}
             >
@@ -859,8 +854,6 @@ export default function Home() {
 
       <div className="px-5 pt-5 pb-3">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
           className="relative"
         >
           <div className="absolute -inset-1 rounded-[28px] bg-gradient-to-tr from-pink-400/40 via-rose-300/30 to-pink-500/40 blur-md" />

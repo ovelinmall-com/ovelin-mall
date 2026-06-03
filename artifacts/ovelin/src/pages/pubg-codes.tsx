@@ -79,7 +79,6 @@ function RingChart({ pct, color, size = 52, topLabel }: { pct: number; color: st
             strokeDasharray={circ}
             initial={{ strokeDashoffset: circ }}
             animate={{ strokeDashoffset: circ - (pct / 100) * circ }}
-            transition={{ duration: 1.3, ease: "easeOut", delay: 0.3 }}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
@@ -97,15 +96,13 @@ function CodeReveal({ code, onCopy, copied, onReset }: { code: string; onCopy: (
   useEffect(() => { const t = setTimeout(() => setRevealed(true), 400); return () => clearTimeout(t); }, []);
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.92 }}
-      animate={{ opacity: 1, scale: 1 }}
       className="rounded-2xl overflow-hidden border border-pink-500/40 mb-4"
       style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.12), rgba(168,85,247,0.08))" }}
     >
       {/* Header */}
       <div className="bg-gradient-to-r from-pink-600/50 to-fuchsia-600/40 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}>
+          <motion.div animate={{ scale: [1, 1.2, 1] }}>
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           </motion.div>
           <span className="text-white font-black text-sm">تم التسليم بنجاح! 🎉</span>
@@ -342,7 +339,6 @@ export default function PubgCodes() {
             { icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, val: "100%", label: "ضمان" },
           ].map((s, i) => (
             <motion.div key={s.label}
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
               className="rounded-2xl bg-white/5 border border-pink-800/30 py-3 flex flex-col items-center gap-1"
             >
@@ -417,8 +413,6 @@ export default function PubgCodes() {
               return (
                 <motion.button
                   key={p.id}
-                  initial={{ opacity: 0, scale: 0.88 }}
-                  animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.06, type: "spring", stiffness: 280, damping: 22 }}
                   whileTap={!outOfStock ? { scale: 0.95 } : undefined}
                   onClick={() => !outOfStock && handleSelect(p)}
@@ -507,8 +501,7 @@ export default function PubgCodes() {
         {/* ── Selected Detail ── */}
         <AnimatePresence>
           {selectedProduct && !deliveredCode && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            <motion.div animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
               className="mb-4 overflow-hidden"
             >
               <div className="rounded-2xl border border-pink-500/30 p-4"
@@ -543,7 +536,6 @@ export default function PubgCodes() {
                     className={`h-2 rounded-full ${canAfford ? "bg-gradient-to-r from-emerald-500 to-green-400" : "bg-gradient-to-r from-red-500 to-rose-500"}`}
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, (balance / Math.max(balance, selectedPrice)) * 100)}%` }}
-                    transition={{ duration: 0.8 }}
                   />
                 </div>
                 {!canAfford && (
@@ -557,8 +549,7 @@ export default function PubgCodes() {
         {/* ── Error ── */}
         <AnimatePresence>
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            <motion.div exit={{ opacity: 0 }}
               className="mb-4 flex items-start gap-2 p-3 rounded-2xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs"
             >
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
@@ -656,9 +647,7 @@ export default function PubgCodes() {
                 </button>
                 <AnimatePresence>
                   {openFaq === faq.id && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.22 }}
+                    <motion.div animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
                       <div className="px-4 py-3 text-pink-200/70 text-sm leading-relaxed border-t border-pink-800/20">

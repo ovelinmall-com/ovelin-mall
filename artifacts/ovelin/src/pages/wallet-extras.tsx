@@ -472,7 +472,7 @@ function PotActionsModal({ pot, onClose, onChange }: { pot: Pot; onClose: () => 
             <ArrowUpFromLine className="w-3.5 h-3.5" /> سحب
           </button>
         </div>
-        <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" placeholder="المبلغ" className="w-full bg-pink-50 rounded-2xl px-3 py-2.5 text-[13px] focus:outline-none text-center font-extrabold" />
+        <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" placeholder="أدخل المبلغ" dir="ltr" className="w-full bg-pink-50 rounded-2xl px-3 py-2.5 text-[13px] focus:outline-none text-left font-extrabold" />
         {err && <div className="text-[11px] text-pink-600 font-bold">{err}</div>}
         <button onClick={go} disabled={busy || !amount} className="w-full py-3 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 text-white font-extrabold disabled:opacity-50">
           {busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : tab === "deposit" ? "إيداع" : "سحب"}
@@ -569,7 +569,7 @@ function P2PSendQR() {
                   </div>
                 </div>
               )}
-              <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" placeholder="المبلغ" className="w-full bg-pink-50 rounded-2xl px-3 py-2.5 text-[13px] focus:outline-none text-center font-extrabold" />
+              <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" placeholder="أدخل المبلغ" dir="ltr" className="w-full bg-pink-50 rounded-2xl px-3 py-2.5 text-[13px] focus:outline-none text-left font-extrabold" />
               <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="ملاحظة (اختياري)" className="w-full bg-pink-50 rounded-2xl px-3 py-2.5 text-[12px] focus:outline-none" />
               {err && <div className="text-[11px] text-pink-600 font-bold">{err}</div>}
               {ok && <div className="text-[11px] text-emerald-600 font-bold bg-emerald-50 rounded-xl p-2 text-center">{ok}</div>}

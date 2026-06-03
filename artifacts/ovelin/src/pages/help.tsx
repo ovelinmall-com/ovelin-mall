@@ -135,8 +135,6 @@ export default function HelpPage() {
           {tab === "faq" ? (
             <motion.div
               key="faq"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="space-y-3"
             >
@@ -193,7 +191,6 @@ export default function HelpPage() {
                       <AnimatePresence>
                         {isOpen && (
                           <motion.div
-                            initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
@@ -288,8 +285,6 @@ export default function HelpPage() {
           ) : (
             <motion.div
               key="status"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="space-y-3"
             >

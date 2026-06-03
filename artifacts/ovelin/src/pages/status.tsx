@@ -64,8 +64,6 @@ export default function StatusPage() {
 
       <div className="px-5 space-y-3 pb-4">
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
           className={cn(
             "rounded-3xl p-5 border-2 shadow-sm flex items-center gap-3",
             overallMeta.color
@@ -100,8 +98,6 @@ export default function StatusPage() {
               return (
                 <motion.div
                   key={c.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
                   className="rounded-2xl border border-pink-100 p-3 flex items-center gap-3"
                 >
                   <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", meta.color)}>

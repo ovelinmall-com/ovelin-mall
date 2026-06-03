@@ -14,16 +14,25 @@
 // صاحب المشروع يتحمل كامل المسؤولية عن إبقاء الرابط ظاهراً.
 // ============================================================
 
-import { memo } from "react";
-import { useRealtime } from "@/lib/realtime";
+import { db, auditLogTable } from "@workspace/db";
+import { logger } from "../logger";
 
-export const OnlineBadge = memo(function OnlineBadge() {
-  const { online, connected } = useRealtime();
-  if (!connected) return null;
-  return (
-    <div className="inline-flex items-center gap-1.5 text-[10px] text-pink-600 bg-white/90 dark:bg-zinc-900/90 px-2 py-0.5 rounded-full backdrop-blur">
-      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-      {online} متصل الآن
-    </div>
-  );
-});
+export async function audit(
+  actor: string,
+  action: string,
+  entity: string,
+  entityId?: string | number | null,
+  details?: any,
+): Promise<void> {
+  try {
+    await db.insert(auditLogTable).values({
+      actor,
+      action,
+      entity,
+      entityId: entityId == null ? null : String(entityId),
+      details: details == null ? null : typeof details === "string" ? details : JSON.stringify(details),
+    });
+  } catch (err) {
+    logger.warn({ err }, "audit log failed");
+  }
+}

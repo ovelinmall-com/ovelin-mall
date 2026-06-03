@@ -129,8 +129,6 @@ export default function GiftCardsPage() {
       <div className="px-5 space-y-3 pb-4">
         {/* Hero */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
           className="rounded-3xl p-5 bg-gradient-to-br from-amber-400 via-pink-500 to-rose-600 text-white shadow-[0_15px_40px_-10px_rgba(190,24,93,0.5)] relative overflow-hidden"
         >
           <Gift className="absolute -top-4 -left-4 w-32 h-32 opacity-15" />

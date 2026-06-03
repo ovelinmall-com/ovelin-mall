@@ -14,7 +14,10 @@
 // صاحب المشروع يتحمل كامل المسؤولية عن إبقاء الرابط ظاهراً.
 // ============================================================
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import React, {
+  createContext, useContext, useEffect, useState, useRef,
+  ReactNode, useCallback, useMemo,
+} from "react";
 import { api } from "./api";
 
 type Lang = "ar" | "en" | "fr" | "es" | "tr" | "ru";
@@ -47,6 +50,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     try { return (localStorage.getItem(LANG_KEY) as Lang) || "ar"; } catch { return "ar"; }
   });
 
+  // ✅ FIX: نقل requestBatch و batchTimer إلى refs
+  // كانت مُعلنة داخل جسم المكوّن → تُعاد إنشاؤها وتُصفَّر في كل render
+  // هذا كان يُعطّل منطق التجميع (batching) بالكامل
+  const requestBatchRef = useRef<string[]>([]);
+  const batchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => { loadCache(lang); }, [lang]);
 
   useEffect(() => {
@@ -62,27 +71,24 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     loadCache(l);
   }, []);
 
-  const requestBatch: string[] = [];
-  let batchTimer: any = null;
-
-  const queueTranslate = (text: string) => {
-    if (lang === "ar") return;
-    if (cache[lang]?.[text] !== undefined) return;
-    if (`${lang}|${text}` in inflight) return;
-    if (!requestBatch.includes(text)) requestBatch.push(text);
-    if (batchTimer) clearTimeout(batchTimer);
-    batchTimer = setTimeout(async () => {
-      const items = requestBatch.splice(0, requestBatch.length);
-      const key = items.map((i) => `${lang}|${i}`).join("§");
+  const queueTranslate = useCallback((text: string, currentLang: Lang) => {
+    if (currentLang === "ar") return;
+    if (cache[currentLang]?.[text] !== undefined) return;
+    if (`${currentLang}|${text}` in inflight) return;
+    if (!requestBatchRef.current.includes(text)) requestBatchRef.current.push(text);
+    if (batchTimerRef.current) clearTimeout(batchTimerRef.current);
+    batchTimerRef.current = setTimeout(async () => {
+      const items = requestBatchRef.current.splice(0, requestBatchRef.current.length);
+      if (!items.length) return;
+      const key = items.map((i) => `${currentLang}|${i}`).join("§");
       const p = (async () => {
         try {
           const res = await api<{ translations: Record<string, string> }>("/api/ai/translate-batch", {
-            method: "POST", body: JSON.stringify({ items, targetLang: lang }),
+            method: "POST", body: JSON.stringify({ items, targetLang: currentLang }),
           });
-          cache[lang] = cache[lang] || {};
-          for (const [k, v] of Object.entries(res.translations || {})) cache[lang][k] = v;
-          saveCache(lang);
-          // trigger re-render
+          cache[currentLang] = cache[currentLang] || {};
+          for (const [k, v] of Object.entries(res.translations || {})) cache[currentLang][k] = v;
+          saveCache(currentLang);
           window.dispatchEvent(new CustomEvent("ovelin-i18n-update"));
         } catch { /* ignore */ }
       })();
@@ -90,17 +96,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       await p;
       delete inflight[key];
     }, 250);
-  };
+  }, []);
 
   const t = useCallback((text: string) => {
     if (lang === "ar" || !text) return text;
     const v = cache[lang]?.[text];
     if (v) return v;
-    queueTranslate(text);
+    queueTranslate(text, lang);
     return text;
-  }, [lang]);
+  }, [lang, queueTranslate]);
 
-  // Force re-render on i18n update
   const [, force] = useState(0);
   useEffect(() => {
     const handler = () => force((x) => x + 1);
@@ -108,7 +113,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("ovelin-i18n-update", handler);
   }, []);
 
-  return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;
+  // ✅ FIX: useMemo يمنع تغيير مرجع context في كل render
+  const value = useMemo<I18nContextType>(() => ({ lang, setLang, t }), [lang, setLang, t]);
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n() {

@@ -258,8 +258,6 @@ export default function Register() {
     return (
       <div className="min-h-[100dvh] flex flex-col justify-center px-6 py-10">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
           className="fancy-card rounded-3xl p-8 shadow-xl text-center space-y-4"
         >
           <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto" />
@@ -291,8 +289,6 @@ export default function Register() {
 
         {/* ─── الرأس ─────────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
           <div className="inline-flex p-4 rounded-3xl bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-[0_15px_40px_-10px_rgba(190,24,93,0.5)]">
@@ -329,8 +325,6 @@ export default function Register() {
           {step === "form" && (
             <motion.form
               key="form"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -30 }}
               onSubmit={handleFormSubmit}
               className="fancy-card rounded-3xl p-6 shadow-xl space-y-4"
@@ -485,8 +479,6 @@ export default function Register() {
           {step === "otp" && (
             <motion.form
               key="otp"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -30 }}
               onSubmit={handleOtpSubmit}
               className="fancy-card rounded-3xl p-6 shadow-xl space-y-4"

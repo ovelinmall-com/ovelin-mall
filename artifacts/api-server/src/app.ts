@@ -18,6 +18,8 @@ import express, { type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
+import path from "node:path";
+import { existsSync } from "node:fs";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -64,5 +66,16 @@ app.get("/.well-known/assetlinks.json", (_req, res) => {
 });
 
 app.use("/api", router);
+
+// Serve React SPA in production (HuggingFace / standalone deployment)
+if (process.env.NODE_ENV === "production") {
+  const publicDir = path.join(globalThis.__dirname ?? import.meta.dirname, "..", "public");
+  if (existsSync(publicDir)) {
+    app.use(express.static(publicDir, { maxAge: "1d" }));
+    app.get("*", (_req, res) => {
+      res.sendFile(path.join(publicDir, "index.html"));
+    });
+  }
+}
 
 export default app;

@@ -1,0 +1,1520 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.2.0
+  description: OVELIN store API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: auth
+  - name: catalog
+  - name: orders
+  - name: wallet
+  - name: referrals
+  - name: notifications
+  - name: account
+  - name: stats
+  - name: ratings
+  - name: wishlist
+  - name: coupons
+  - name: banners
+  - name: settings
+  - name: admin
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      responses:
+        "200":
+          description: Healthy
+          content: { application/json: { schema: { $ref: "#/components/schemas/HealthStatus" } } }
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RegisterBody" } } }
+      responses:
+        "200":
+          description: User created
+          content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } }
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/LoginBody" } } }
+      responses:
+        "200":
+          description: Logged in
+          content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      responses:
+        "200":
+          description: Logged out
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      responses:
+        "200":
+          description: Current user
+          content: { application/json: { schema: { $ref: "#/components/schemas/User" } } }
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ForgotPasswordBody" } } }
+      responses:
+        "200":
+          description: Reset token
+          content: { application/json: { schema: { $ref: "#/components/schemas/ForgotPasswordResponse" } } }
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ResetPasswordBody" } } }
+      responses:
+        "200":
+          description: Password reset
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [catalog]
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Category" } }
+  /products:
+    get:
+      operationId: listProducts
+      tags: [catalog]
+      parameters:
+        - { name: category, in: query, required: false, schema: { type: string } }
+        - { name: platform, in: query, required: false, schema: { type: string } }
+        - { name: search, in: query, required: false, schema: { type: string } }
+        - { name: sort, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Product" } }
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [catalog]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Product
+          content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } }
+  /products/{id}/ratings:
+    get:
+      operationId: listProductRatings
+      tags: [ratings]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Ratings
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Rating" } }
+    post:
+      operationId: createProductRating
+      tags: [ratings]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateRatingBody" } } }
+      responses:
+        "200":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Rating" } } }
+
+  /wishlist:
+    get:
+      operationId: getWishlist
+      tags: [wishlist]
+      responses:
+        "200":
+          description: Wishlist
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Product" } }
+  /wishlist/{productId}:
+    post:
+      operationId: addToWishlist
+      tags: [wishlist]
+      parameters:
+        - { name: productId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Added
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+    delete:
+      operationId: removeFromWishlist
+      tags: [wishlist]
+      parameters:
+        - { name: productId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Removed
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+
+  /coupons/validate:
+    post:
+      operationId: validateCoupon
+      tags: [coupons]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ValidateCouponBody" } } }
+      responses:
+        "200":
+          description: Validation
+          content: { application/json: { schema: { $ref: "#/components/schemas/CouponValidation" } } }
+
+  /banners:
+    get:
+      operationId: listBanners
+      tags: [banners]
+      responses:
+        "200":
+          description: Banners
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Banner" } }
+
+  /settings/public:
+    get:
+      operationId: getPublicSettings
+      tags: [settings]
+      responses:
+        "200":
+          description: Public settings
+          content: { application/json: { schema: { $ref: "#/components/schemas/PublicSettings" } } }
+
+  /orders:
+    post:
+      operationId: createOrder
+      tags: [orders]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateOrderBody" } } }
+      responses:
+        "200":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } }
+  /orders/me:
+    get:
+      operationId: listMyOrders
+      tags: [orders]
+      parameters:
+        - { name: status, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: My orders
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Order" } }
+  /orders/{id}:
+    get:
+      operationId: getMyOrder
+      tags: [orders]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Order detail
+          content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetail" } } }
+  /orders/{id}/cancel:
+    post:
+      operationId: cancelMyOrder
+      tags: [orders]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Cancelled
+          content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } }
+  /orders/{id}/reorder:
+    post:
+      operationId: reorderMyOrder
+      tags: [orders]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: New order
+          content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } }
+
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      responses:
+        "200":
+          description: Wallet
+          content: { application/json: { schema: { $ref: "#/components/schemas/Wallet" } } }
+  /wallet/deposit:
+    post:
+      operationId: requestDeposit
+      tags: [wallet]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/DepositBody" } } }
+      responses:
+        "200":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Transaction" } } }
+  /wallet/transactions:
+    get:
+      operationId: listMyTransactions
+      tags: [wallet]
+      responses:
+        "200":
+          description: Transactions
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Transaction" } }
+  /wallet/withdraw:
+    post:
+      operationId: requestWithdraw
+      tags: [wallet]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/WithdrawBody" } } }
+      responses:
+        "200":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Transaction" } } }
+  /wallet/transfer:
+    post:
+      operationId: transferBalance
+      tags: [wallet]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/TransferBody" } } }
+      responses:
+        "200":
+          description: Transferred
+          content: { application/json: { schema: { $ref: "#/components/schemas/Transaction" } } }
+
+  /referrals/me:
+    get:
+      operationId: getMyReferrals
+      tags: [referrals]
+      responses:
+        "200":
+          description: Referrals
+          content: { application/json: { schema: { $ref: "#/components/schemas/ReferralStats" } } }
+  /referrals/leaderboard:
+    get:
+      operationId: getReferralLeaderboard
+      tags: [referrals]
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/LeaderboardEntry" } }
+  /referrals/earnings:
+    get:
+      operationId: getReferralEarnings
+      tags: [referrals]
+      responses:
+        "200":
+          description: Earnings
+          content: { application/json: { schema: { $ref: "#/components/schemas/EarningsFeed" } } }
+
+  /notifications:
+    get:
+      operationId: listMyNotifications
+      tags: [notifications]
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Notification" } }
+  /notifications/unread-count:
+    get:
+      operationId: getUnreadCount
+      tags: [notifications]
+      responses:
+        "200":
+          description: Count
+          content: { application/json: { schema: { $ref: "#/components/schemas/UnreadCount" } } }
+  /notifications/read-all:
+    post:
+      operationId: markAllRead
+      tags: [notifications]
+      responses:
+        "200":
+          description: Done
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Marked
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+
+  /account/dashboard:
+    get:
+      operationId: getMyDashboard
+      tags: [account]
+      responses:
+        "200":
+          description: Dashboard
+          content: { application/json: { schema: { $ref: "#/components/schemas/AccountDashboard" } } }
+  /account/activity:
+    get:
+      operationId: getMyActivity
+      tags: [account]
+      responses:
+        "200":
+          description: Activity
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ActivityItem" } }
+  /account/change-password:
+    post:
+      operationId: changePassword
+      tags: [account]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ChangePasswordBody" } } }
+      responses:
+        "200":
+          description: Changed
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /account/profile:
+    patch:
+      operationId: updateMyProfile
+      tags: [account]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateProfileBody" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/User" } } }
+
+  /stats/overview:
+    get:
+      operationId: getStatsOverview
+      tags: [stats]
+      responses:
+        "200":
+          description: Stats
+          content: { application/json: { schema: { $ref: "#/components/schemas/StatsOverview" } } }
+
+  /support/tickets:
+    get:
+      operationId: listMySupportTickets
+      tags: [support]
+      responses:
+        "200":
+          description: Tickets
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/SupportTicket" } }
+    post:
+      operationId: createSupportTicket
+      tags: [support]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateSupportTicketBody" } } }
+      responses:
+        "200":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/CreateSupportTicketResponse" } } }
+  /support/unread-count:
+    get:
+      operationId: getSupportUnreadCount
+      tags: [support]
+      responses:
+        "200":
+          description: Count
+          content: { application/json: { schema: { $ref: "#/components/schemas/UnreadCount" } } }
+  /support/tickets/{id}:
+    get:
+      operationId: getSupportTicket
+      tags: [support]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Ticket detail
+          content: { application/json: { schema: { $ref: "#/components/schemas/SupportTicketDetail" } } }
+  /support/tickets/{id}/messages:
+    post:
+      operationId: addSupportMessage
+      tags: [support]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SupportMessageBody" } } }
+      responses:
+        "200":
+          description: Sent
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /support/tickets/{id}/close:
+    post:
+      operationId: closeSupportTicket
+      tags: [support]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Closed
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+
+  /admin/support/tickets:
+    get:
+      operationId: listAdminSupportTickets
+      tags: [admin]
+      parameters:
+        - { name: status, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: Tickets
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AdminSupportTicket" } }
+  /admin/support/unread-count:
+    get:
+      operationId: getAdminSupportUnreadCount
+      tags: [admin]
+      responses:
+        "200":
+          description: Count
+          content: { application/json: { schema: { $ref: "#/components/schemas/UnreadCount" } } }
+  /admin/support/tickets/{id}:
+    get:
+      operationId: getAdminSupportTicket
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Ticket detail
+          content: { application/json: { schema: { $ref: "#/components/schemas/AdminSupportTicketDetail" } } }
+    patch:
+      operationId: updateAdminSupportTicket
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAdminSupportTicketBody" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /admin/support/tickets/{id}/reply:
+    post:
+      operationId: replyAdminSupportTicket
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SupportMessageBody" } } }
+      responses:
+        "200":
+          description: Replied
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AdminLoginBody" } } }
+      responses:
+        "200":
+          description: Admin session
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /admin/logout:
+    post:
+      operationId: adminLogout
+      tags: [admin]
+      responses:
+        "200":
+          description: Logged out
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      responses:
+        "200":
+          description: Stats
+          content: { application/json: { schema: { $ref: "#/components/schemas/AdminStats" } } }
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AdminUser" } }
+  /admin/users/{id}:
+    patch:
+      operationId: updateAdminUser
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateUserBody" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/AdminUser" } } }
+  /admin/users/{id}/reset-password:
+    post:
+      operationId: adminResetUserPassword
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AdminResetPasswordBody" } } }
+      responses:
+        "200":
+          description: Reset
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /admin/orders:
+    get:
+      operationId: listAdminOrders
+      tags: [admin]
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AdminOrder" } }
+  /admin/orders/{id}:
+    patch:
+      operationId: updateAdminOrder
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateOrderBody" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrder" } } }
+  /admin/products:
+    get:
+      operationId: listAdminProducts
+      tags: [admin]
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Product" } }
+    post:
+      operationId: createAdminProduct
+      tags: [admin]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateProductBody" } } }
+      responses:
+        "200":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } }
+  /admin/products/{id}:
+    patch:
+      operationId: updateAdminProduct
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateProductBody" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } }
+    delete:
+      operationId: deleteAdminProduct
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Deleted
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /admin/transactions:
+    get:
+      operationId: listAdminTransactions
+      tags: [admin]
+      responses:
+        "200":
+          description: Transactions
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AdminTransaction" } }
+  /admin/transactions/{id}:
+    patch:
+      operationId: updateAdminTransaction
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateTransactionBody" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/AdminTransaction" } } }
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [admin]
+      responses:
+        "200":
+          description: Settings
+          content: { application/json: { schema: { $ref: "#/components/schemas/AdminSettings" } } }
+    patch:
+      operationId: updateAdminSettings
+      tags: [admin]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateSettingsBody" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/AdminSettings" } } }
+  /admin/coupons:
+    get:
+      operationId: listAdminCoupons
+      tags: [admin]
+      responses:
+        "200":
+          description: Coupons
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Coupon" } }
+    post:
+      operationId: createAdminCoupon
+      tags: [admin]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateCouponBody" } } }
+      responses:
+        "200":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Coupon" } } }
+  /admin/coupons/{id}:
+    patch:
+      operationId: updateAdminCoupon
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateCouponBody" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/Coupon" } } }
+    delete:
+      operationId: deleteAdminCoupon
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Deleted
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /admin/banners:
+    get:
+      operationId: listAdminBanners
+      tags: [admin]
+      responses:
+        "200":
+          description: Banners
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Banner" } }
+    post:
+      operationId: createAdminBanner
+      tags: [admin]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateBannerBody" } } }
+      responses:
+        "200":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Banner" } } }
+  /admin/banners/{id}:
+    patch:
+      operationId: updateAdminBanner
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateBannerBody" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/Banner" } } }
+    delete:
+      operationId: deleteAdminBanner
+      tags: [admin]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Deleted
+          content: { application/json: { schema: { $ref: "#/components/schemas/SuccessResponse" } } }
+  /admin/audit-log:
+    get:
+      operationId: listAuditLog
+      tags: [admin]
+      responses:
+        "200":
+          description: Log
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } }
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties: { status: { type: string } }
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+
+    RegisterBody:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 50 }
+        email: { type: string }
+        password: { type: string, minLength: 4 }
+        referralCode: { type: string }
+    LoginBody:
+      type: object
+      required: [identifier, password]
+      properties:
+        identifier: { type: string }
+        password: { type: string }
+    AuthResponse:
+      type: object
+      required: [user]
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+    User:
+      type: object
+      required: [id, username, balance, cashbackBalance, vipLevel, totalSpent, referralCode, createdAt]
+      properties:
+        id: { type: integer }
+        displayId: { type: string, nullable: true }
+        username: { type: string }
+        email: { type: string, nullable: true }
+        balance: { type: string }
+        cashbackBalance: { type: string }
+        totalSpent: { type: string }
+        vipLevel: { type: string }
+        referralCode: { type: string }
+        referredBy: { type: string, nullable: true }
+        createdAt: { type: string }
+    ForgotPasswordBody:
+      type: object
+      required: [identifier]
+      properties:
+        identifier: { type: string }
+    ForgotPasswordResponse:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean }
+        token: { type: string, nullable: true }
+        message: { type: string }
+    ResetPasswordBody:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token: { type: string }
+        newPassword: { type: string, minLength: 4 }
+
+    Category:
+      type: object
+      required: [slug, name, description, productCount]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string }
+        icon: { type: string }
+        productCount: { type: integer }
+    Product:
+      type: object
+      required: [id, name, description, price, category, active, ratingAvg, ratingCount, salesCount]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        price: { type: string }
+        oldPrice: { type: string, nullable: true }
+        category: { type: string }
+        platform: { type: string, nullable: true }
+        quantity: { type: integer, nullable: true }
+        deliveryTime: { type: string, nullable: true }
+        imageUrl: { type: string, nullable: true }
+        badge: { type: string, nullable: true }
+        active: { type: boolean }
+        sortOrder: { type: integer, nullable: true }
+        ratingAvg: { type: string }
+        ratingCount: { type: integer }
+        salesCount: { type: integer }
+
+    Rating:
+      type: object
+      required: [id, username, stars, comment, verified, createdAt]
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        stars: { type: integer }
+        comment: { type: string }
+        verified: { type: boolean }
+        createdAt: { type: string }
+    CreateRatingBody:
+      type: object
+      required: [stars]
+      properties:
+        stars: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+
+    ValidateCouponBody:
+      type: object
+      required: [code, productId]
+      properties:
+        code: { type: string }
+        productId: { type: integer }
+    CouponValidation:
+      type: object
+      required: [valid]
+      properties:
+        valid: { type: boolean }
+        message: { type: string }
+        discount: { type: string, nullable: true }
+        finalPrice: { type: string, nullable: true }
+
+    Banner:
+      type: object
+      required: [id, title, subtitle, bgColor, active, sortOrder]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        subtitle: { type: string }
+        imageUrl: { type: string, nullable: true }
+        link: { type: string, nullable: true }
+        bgColor: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+    CreateBannerBody:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        subtitle: { type: string }
+        imageUrl: { type: string }
+        link: { type: string }
+        bgColor: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+    UpdateBannerBody:
+      type: object
+      properties:
+        title: { type: string }
+        subtitle: { type: string }
+        imageUrl: { type: string }
+        link: { type: string }
+        bgColor: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+
+    PublicSettings:
+      type: object
+      required: [siteName, supportWhatsapp, supportTelegram, depositAddresses, minWithdraw, referralCommissionPct, referralSignupBonus, cashbackPct, maintenanceMode]
+      properties:
+        siteName: { type: string }
+        supportWhatsapp: { type: string }
+        supportTelegram: { type: string }
+        depositAddresses:
+          type: object
+          required: [usdt, bank, cash]
+          properties:
+            usdt: { type: string }
+            bank: { type: string }
+            cash: { type: string }
+        minWithdraw: { type: string }
+        referralCommissionPct: { type: string }
+        referralSignupBonus: { type: string }
+        cashbackPct: { type: string }
+        maintenanceMode: { type: boolean }
+        maintenanceMessage: { type: string }
+        announcementBar: { type: string }
+
+    AdminSettings:
+      type: object
+      required: [siteName, supportWhatsapp, supportTelegram, depositUsdtAddress, depositBankInfo, depositCashInfo, minWithdraw, referralCommissionPct, referralSignupBonus, cashbackPct, maintenanceMode, maintenanceMessage, announcementBar, vipBronzeMin, vipSilverMin, vipGoldMin, vipDiamondMin]
+      properties:
+        siteName: { type: string }
+        supportWhatsapp: { type: string }
+        supportTelegram: { type: string }
+        depositUsdtAddress: { type: string }
+        depositBankInfo: { type: string }
+        depositCashInfo: { type: string }
+        minWithdraw: { type: string }
+        referralCommissionPct: { type: string }
+        referralSignupBonus: { type: string }
+        cashbackPct: { type: string }
+        maintenanceMode: { type: boolean }
+        maintenanceMessage: { type: string }
+        announcementBar: { type: string }
+        vipBronzeMin: { type: string }
+        vipSilverMin: { type: string }
+        vipGoldMin: { type: string }
+        vipDiamondMin: { type: string }
+    UpdateSettingsBody:
+      type: object
+      properties:
+        siteName: { type: string }
+        supportWhatsapp: { type: string }
+        supportTelegram: { type: string }
+        depositUsdtAddress: { type: string }
+        depositBankInfo: { type: string }
+        depositCashInfo: { type: string }
+        minWithdraw: { type: string }
+        referralCommissionPct: { type: string }
+        referralSignupBonus: { type: string }
+        cashbackPct: { type: string }
+        maintenanceMode: { type: boolean }
+        maintenanceMessage: { type: string }
+        announcementBar: { type: string }
+        vipBronzeMin: { type: string }
+        vipSilverMin: { type: string }
+        vipGoldMin: { type: string }
+        vipDiamondMin: { type: string }
+
+    Coupon:
+      type: object
+      required: [id, code, description, type, value, maxUses, usedCount, minOrder, active, createdAt]
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        description: { type: string }
+        type: { type: string }
+        value: { type: string }
+        maxUses: { type: integer }
+        usedCount: { type: integer }
+        minOrder: { type: string }
+        applyToCategory: { type: string, nullable: true }
+        expiresAt: { type: string, nullable: true }
+        active: { type: boolean }
+        createdAt: { type: string }
+    CreateCouponBody:
+      type: object
+      required: [code, type, value]
+      properties:
+        code: { type: string }
+        description: { type: string }
+        type: { type: string }
+        value: { type: string }
+        maxUses: { type: integer }
+        minOrder: { type: string }
+        applyToCategory: { type: string }
+        expiresAt: { type: string }
+        active: { type: boolean }
+    UpdateCouponBody:
+      type: object
+      properties:
+        code: { type: string }
+        description: { type: string }
+        type: { type: string }
+        value: { type: string }
+        maxUses: { type: integer }
+        minOrder: { type: string }
+        applyToCategory: { type: string }
+        expiresAt: { type: string }
+        active: { type: boolean }
+
+    CreateOrderBody:
+      type: object
+      required: [productId, targetInfo]
+      properties:
+        productId: { type: integer }
+        targetInfo: { type: string }
+        notes: { type: string }
+        couponCode: { type: string }
+        useCashback: { type: boolean }
+    Order:
+      type: object
+      required: [id, userId, productId, productName, price, finalPrice, status, createdAt]
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        productId: { type: integer }
+        productName: { type: string }
+        price: { type: string }
+        discount: { type: string }
+        cashbackUsed: { type: string }
+        finalPrice: { type: string }
+        couponCode: { type: string, nullable: true }
+        targetInfo: { type: string }
+        notes: { type: string, nullable: true }
+        status: { type: string }
+        proofUrl: { type: string, nullable: true }
+        createdAt: { type: string }
+    OrderEvent:
+      type: object
+      required: [id, orderId, status, createdAt]
+      properties:
+        id: { type: integer }
+        orderId: { type: integer }
+        status: { type: string }
+        message: { type: string, nullable: true }
+        createdAt: { type: string }
+    OrderDetail:
+      type: object
+      required: [id, userId, productId, productName, price, finalPrice, status, createdAt, events]
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        productId: { type: integer }
+        productName: { type: string }
+        price: { type: string }
+        discount: { type: string }
+        cashbackUsed: { type: string }
+        finalPrice: { type: string }
+        couponCode: { type: string, nullable: true }
+        targetInfo: { type: string }
+        notes: { type: string, nullable: true }
+        status: { type: string }
+        proofUrl: { type: string, nullable: true }
+        createdAt: { type: string }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/OrderEvent" }
+
+    Wallet:
+      type: object
+      required: [balance, cashbackBalance, totalDeposits, totalSpent, vipLevel]
+      properties:
+        balance: { type: string }
+        cashbackBalance: { type: string }
+        totalDeposits: { type: string }
+        totalSpent: { type: string }
+        vipLevel: { type: string }
+        nextVipLevel: { type: string, nullable: true }
+        nextVipAt: { type: string, nullable: true }
+    DepositBody:
+      type: object
+      required: [amount, method]
+      properties:
+        amount: { type: string }
+        method: { type: string }
+        reference: { type: string }
+    Transaction:
+      type: object
+      required: [id, userId, type, amount, status, createdAt]
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        type: { type: string }
+        amount: { type: string }
+        method: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+        status: { type: string }
+        createdAt: { type: string }
+    WithdrawBody:
+      type: object
+      required: [amount, method, destination]
+      properties:
+        amount: { type: string }
+        method: { type: string }
+        destination: { type: string }
+    TransferBody:
+      type: object
+      required: [toUsername, amount]
+      properties:
+        toUsername: { type: string }
+        amount: { type: string }
+        note: { type: string }
+
+    ReferralStats:
+      type: object
+      required: [referralCode, totalReferrals, totalEarned, referrals]
+      properties:
+        referralCode: { type: string }
+        referralLink: { type: string }
+        totalReferrals: { type: integer }
+        totalEarned: { type: string }
+        signupBonusTotal: { type: string }
+        referrals:
+          type: array
+          items:
+            type: object
+            required: [username, joinedAt, earned]
+            properties:
+              username: { type: string }
+              joinedAt: { type: string }
+              earned: { type: string }
+              signupBonus: { type: string }
+    LeaderboardEntry:
+      type: object
+      required: [username, count, earned]
+      properties:
+        username: { type: string }
+        count: { type: integer }
+        earned: { type: string }
+    EarningsFeed:
+      type: object
+      required: [thisMonth, lastMonth, allTime, recent, monthly]
+      properties:
+        thisMonth: { type: string }
+        lastMonth: { type: string }
+        allTime: { type: string }
+        recent:
+          type: array
+          items:
+            type: object
+            required: [id, fromUsername, amount, createdAt]
+            properties:
+              id: { type: integer }
+              fromUsername: { type: string }
+              amount: { type: string }
+              orderId: { type: integer, nullable: true }
+              createdAt: { type: string }
+        monthly:
+          type: array
+          items:
+            type: object
+            required: [month, total]
+            properties:
+              month: { type: string }
+              total: { type: string }
+
+    Notification:
+      type: object
+      required: [id, type, title, message, isRead, createdAt]
+      properties:
+        id: { type: integer }
+        type: { type: string }
+        title: { type: string }
+        message: { type: string }
+        link: { type: string, nullable: true }
+        isRead: { type: boolean }
+        createdAt: { type: string }
+    UnreadCount:
+      type: object
+      required: [count]
+      properties:
+        count: { type: integer }
+
+    AccountDashboard:
+      type: object
+      required: [user, wallet, recentOrders, recentTransactions, unreadNotifications, referralStats]
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        wallet: { $ref: "#/components/schemas/Wallet" }
+        recentOrders:
+          type: array
+          items: { $ref: "#/components/schemas/Order" }
+        recentTransactions:
+          type: array
+          items: { $ref: "#/components/schemas/Transaction" }
+        unreadNotifications: { type: integer }
+        referralStats:
+          type: object
+          required: [count, earned]
+          properties:
+            count: { type: integer }
+            earned: { type: string }
+    ActivityItem:
+      type: object
+      required: [id, kind, title, description, createdAt]
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        title: { type: string }
+        description: { type: string }
+        amount: { type: string, nullable: true }
+        status: { type: string, nullable: true }
+        createdAt: { type: string }
+
+    ChangePasswordBody:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string, minLength: 4 }
+    UpdateProfileBody:
+      type: object
+      properties:
+        email: { type: string }
+
+    StatsOverview:
+      type: object
+      required: [totalUsers, totalOrders, totalDelivered, platforms]
+      properties:
+        totalUsers: { type: integer }
+        totalOrders: { type: integer }
+        totalDelivered: { type: integer }
+        platforms: { type: integer }
+
+    AdminLoginBody:
+      type: object
+      required: [password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+    AdminStats:
+      type: object
+      required: [totalUsers, totalOrders, pendingOrders, completedOrders, totalRevenue, pendingDeposits]
+      properties:
+        totalUsers: { type: integer }
+        totalOrders: { type: integer }
+        pendingOrders: { type: integer }
+        completedOrders: { type: integer }
+        totalRevenue: { type: string }
+        pendingDeposits: { type: integer }
+        recentOrders:
+          type: array
+          items: { $ref: "#/components/schemas/AdminOrder" }
+    AdminUser:
+      type: object
+      required: [id, username, balance, totalSpent, totalOrders, vipLevel, isBlocked, createdAt]
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        email: { type: string, nullable: true }
+        balance: { type: string }
+        cashbackBalance: { type: string }
+        referralCode: { type: string }
+        referredBy: { type: string, nullable: true }
+        totalSpent: { type: string }
+        totalOrders: { type: integer }
+        vipLevel: { type: string }
+        isBlocked: { type: boolean }
+        createdAt: { type: string }
+    UpdateUserBody:
+      type: object
+      properties:
+        balance: { type: string }
+        cashbackBalance: { type: string }
+        email: { type: string }
+        isBlocked: { type: boolean }
+        vipLevel: { type: string }
+    AdminResetPasswordBody:
+      type: object
+      required: [newPassword]
+      properties:
+        newPassword: { type: string, minLength: 4 }
+    AdminOrder:
+      type: object
+      required: [id, userId, username, productName, price, finalPrice, status, createdAt]
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        username: { type: string }
+        productId: { type: integer }
+        productName: { type: string }
+        price: { type: string }
+        finalPrice: { type: string }
+        couponCode: { type: string, nullable: true }
+        targetInfo: { type: string }
+        notes: { type: string, nullable: true }
+        status: { type: string }
+        proofUrl: { type: string, nullable: true }
+        createdAt: { type: string }
+    UpdateOrderBody:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string }
+        proofUrl: { type: string }
+    CreateProductBody:
+      type: object
+      required: [name, description, price, category]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        price: { type: string }
+        oldPrice: { type: string }
+        category: { type: string }
+        platform: { type: string }
+        quantity: { type: integer }
+        deliveryTime: { type: string }
+        imageUrl: { type: string }
+        badge: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+    UpdateProductBody:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        price: { type: string }
+        oldPrice: { type: string }
+        category: { type: string }
+        platform: { type: string }
+        quantity: { type: integer }
+        deliveryTime: { type: string }
+        imageUrl: { type: string }
+        badge: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: integer }
+    AdminTransaction:
+      type: object
+      required: [id, userId, username, type, amount, status, createdAt]
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        username: { type: string }
+        type: { type: string }
+        amount: { type: string }
+        method: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+        status: { type: string }
+        createdAt: { type: string }
+    UpdateTransactionBody:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string }
+    AuditEntry:
+      type: object
+      required: [id, actor, action, entity, createdAt]
+      properties:
+        id: { type: integer }
+        actor: { type: string }
+        action: { type: string }
+        entity: { type: string }
+        entityId: { type: string, nullable: true }
+        details: { type: string, nullable: true }
+        createdAt: { type: string }
+    SupportTicket:
+      type: object
+      required: [id, subject, category, status, priority, unreadForUser, lastUserAt, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        subject: { type: string }
+        category: { type: string }
+        status: { type: string }
+        priority: { type: string }
+        unreadForUser: { type: integer }
+        lastUserAt: { type: string }
+        lastAdminAt: { type: string, nullable: true }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+    SupportMessage:
+      type: object
+      required: [id, sender, authorName, body, createdAt]
+      properties:
+        id: { type: integer }
+        sender: { type: string }
+        authorName: { type: string }
+        body: { type: string }
+        createdAt: { type: string }
+    SupportTicketDetail:
+      type: object
+      required: [ticket, messages]
+      properties:
+        ticket: { $ref: "#/components/schemas/SupportTicket" }
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/SupportMessage" }
+    CreateSupportTicketBody:
+      type: object
+      required: [subject, message]
+      properties:
+        subject: { type: string, minLength: 3, maxLength: 200 }
+        category: { type: string }
+        message: { type: string, minLength: 1, maxLength: 4000 }
+    CreateSupportTicketResponse:
+      type: object
+      required: [id, success]
+      properties:
+        id: { type: integer }
+        success: { type: boolean }
+    SupportMessageBody:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 4000 }
+    AdminSupportTicket:
+      type: object
+      required: [id, userId, username, subject, category, status, priority, unreadForAdmin, lastUserAt, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        username: { type: string }
+        subject: { type: string }
+        category: { type: string }
+        status: { type: string }
+        priority: { type: string }
+        unreadForAdmin: { type: integer }
+        lastUserAt: { type: string }
+        lastAdminAt: { type: string, nullable: true }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+    AdminSupportTicketDetail:
+      type: object
+      required: [ticket, messages]
+      properties:
+        ticket: { $ref: "#/components/schemas/AdminSupportTicket" }
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/SupportMessage" }
+    UpdateAdminSupportTicketBody:
+      type: object
+      properties:
+        status: { type: string }
+        priority: { type: string }

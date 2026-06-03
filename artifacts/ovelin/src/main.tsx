@@ -19,3 +19,27 @@ import App from "./App";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// تسجيل Service Worker للتحديث التلقائي
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").then((reg) => {
+      // عند وجود تحديث جديد — أعِد التحميل تلقائياً
+      reg.addEventListener("updatefound", () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+            newWorker.postMessage("SKIP_WAITING");
+            window.location.reload();
+          }
+        });
+      });
+    });
+
+    // إذا تغيّر الـ controller (تحديث فعلي) — أعِد التحميل
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      window.location.reload();
+    });
+  });
+}

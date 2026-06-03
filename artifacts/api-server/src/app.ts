@@ -71,8 +71,27 @@ app.use("/api", router);
 if (process.env.NODE_ENV === "production") {
   const publicDir = path.join(globalThis.__dirname ?? import.meta.dirname, "..", "public");
   if (existsSync(publicDir)) {
-    app.use(express.static(publicDir, { maxAge: "1d" }));
+    // index.html و service worker يُخدَمان بدون كاش حتى يشحن التطبيق آخر تحديث دائماً
+    const noCacheFiles = ["/index.html", "/sw.js", "/manifest.json"];
+    app.use((req, res, next) => {
+      if (noCacheFiles.includes(req.path)) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      }
+      next();
+    });
+    // الملفات الثابتة (JS/CSS مع hash) تُكاش لمدة سنة
+    app.use(express.static(publicDir, {
+      maxAge: "1y",
+      setHeaders(res, filePath) {
+        if (filePath.endsWith("index.html") || filePath.endsWith("sw.js") || filePath.endsWith("manifest.json")) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        }
+      }
+    }));
     app.get("*path", (_req, res) => {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       res.sendFile(path.join(publicDir, "index.html"));
     });
   }

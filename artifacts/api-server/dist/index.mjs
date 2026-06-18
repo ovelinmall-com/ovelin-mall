@@ -104437,7 +104437,7 @@ if (process.env.NODE_ENV === "production") {
   const frontendDist = path2.resolve(process.cwd(), "artifacts/ovelin/dist/public");
   if (fs.existsSync(frontendDist)) {
     app.use(import_express58.default.static(frontendDist));
-    app.get("*", (_req, res) => {
+    app.get("*splat", (_req, res) => {
       res.sendFile(path2.join(frontendDist, "index.html"));
     });
   }

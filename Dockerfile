@@ -6,13 +6,9 @@ RUN git clone https://github.com/ovelinmall-com/ovelin-mall.git /app
 
 WORKDIR /app
 
-RUN npm install -g pnpm@10
-
-RUN pnpm install --frozen-lockfile --prod --filter @workspace/api-server --filter @workspace/db --filter @workspace/api-zod
-
 EXPOSE 7860
 
 ENV PORT=7860
 ENV NODE_ENV=production
 
-CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
+CMD ["node", "artifacts/api-server/dist/index.mjs"]

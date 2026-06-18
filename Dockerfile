@@ -6,8 +6,6 @@ RUN git clone https://github.com/ovelinmall-com/ovelin-mall.git /app
 
 WORKDIR /app
 
-RUN npm install --prefix /app nodemailer
-
 EXPOSE 7860
 
 ENV PORT=7860

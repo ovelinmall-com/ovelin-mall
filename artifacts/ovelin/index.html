@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+    <title>Ovelin Store</title>
+
+    <!-- PWA: إخفاء شريط المتصفح عند فتح التطبيق من الشاشة الرئيسية أو WebView -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Ovelin" />
+    <meta name="application-name" content="Ovelin" />
+
+    <!-- منع ظهور شريط العنوان في WebView -->
+    <meta name="theme-color" content="#0f0f0f" />
+    <meta name="msapplication-navbutton-color" content="#0f0f0f" />
+    <meta name="msapplication-starturl" content="/" />
+
+    <!-- ربط ملف manifest الذي يحدد وضع standalone (بدون شريط متصفح) -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+
+    <style>
+      html,body,#root{
+        min-height:100vh;
+        background: #fdf5f8 !important;
+      }
+    </style>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!--
+      ════════════════════════════════════════════════════════════════
+      Median.co / GoNative Push Bridge
+      ════════════════════════════════════════════════════════════════
+      يجب أن يُنفَّذ هذا السكريبت قبل تحميل React لأن:
+      1. gonative_onesignal_info يُستدعى فور بدء التطبيق (قبل تسجيل الدخول)
+      2. يجب تسجيل جميع callbacks كـ global functions قبل أي شيء
+      3. يجب استدعاء الجسر بشكل نشط فور توفّره
+
+      ⚠️ مهم: Median.co يستدعي الـ callbacks بواسطة اسم الدالة كـ string
+         وليس بتمرير function مباشرة — لذا يجب أن تكون على window
+      ════════════════════════════════════════════════════════════════
+    -->
+    <script>
+      (function () {
+        var LOG = '[Ovelin Bridge]';
+
+        function storePending(key, value) {
+          if (!value) return;
+          try {
+            localStorage.setItem(key, value);
+            console.info(LOG, '💾 Token Saved Locally:', key, '->', value.slice(0, 12) + '…');
+          } catch (_) {
+            console.warn(LOG, '❌ localStorage write failed for:', key);
+          }
+        }
+
+        // ── Step 1: Register ALL callbacks as named global functions ───────────
+        // Median.co requires the callback to be a GLOBAL FUNCTION NAME (string)
+        // not an inline function. These must be on window before the bridge fires.
+
+        window.gonative_onesignal_info = function (r) {
+          console.info(LOG, '🔔 gonative_onesignal_info fired:', JSON.stringify(r));
+          if (r && r.userId) {
+            console.info(LOG, '✅ Token Generated (OneSignal player_id):', r.userId.slice(0, 12) + '…');
+            storePending('ovelin_pending_player_id', r.userId);
+          }
+          if (r && r.pushToken) {
+            console.info(LOG, '✅ Token Generated (FCM via OneSignal):', r.pushToken.slice(0, 12) + '…');
+            storePending('ovelin_pending_fcm_token', r.pushToken);
+          }
+          if (!r || (!r.userId && !r.pushToken)) {
+            console.warn(LOG, '⚠️ gonative_onesignal_info fired but no userId/pushToken in response');
+          }
+        };
+        window.median_onesignal_info = window.gonative_onesignal_info;
+
+        window.gonative_registration = function (r) {
+          console.info(LOG, '🔔 gonative_registration fired:', JSON.stringify(r));
+          if (r && r.registrationId) {
+            console.info(LOG, '✅ Token Generated (FCM registrationId):', r.registrationId.slice(0, 12) + '…');
+            storePending('ovelin_pending_fcm_token', r.registrationId);
+          }
+        };
+
+        window.gonative_firebase_token = function (r) {
+          console.info(LOG, '🔔 gonative_firebase_token fired:', JSON.stringify(r));
+          if (r && r.token) {
+            console.info(LOG, '✅ Token Generated (FCM token):', r.token.slice(0, 12) + '…');
+            storePending('ovelin_pending_fcm_token', r.token);
+          }
+        };
+
+        window.median_push_registration = function (r) {
+          console.info(LOG, '🔔 median_push_registration fired:', JSON.stringify(r));
+          var t = (r && (r.token || r.registrationId));
+          if (t) {
+            console.info(LOG, '✅ Token Generated (Median push):', t.slice(0, 12) + '…');
+            storePending('ovelin_pending_fcm_token', t);
+          }
+        };
+
+        window.ovelin_push_permission_cb = function (r) {
+          console.info(LOG, '🔔 ovelin_push_permission_cb:', JSON.stringify(r));
+          // إذا كان الإذن ممنوح واحتوى على token
+          if (r && r.token) {
+            storePending('ovelin_pending_fcm_token', r.token);
+          }
+          if (r && r.playerId) {
+            storePending('ovelin_pending_player_id', r.playerId);
+          }
+        };
+
+        // ── Step 2: Active bridge request — try immediately + retry ────────────
+        // Median.co injects gonative object into JS context.
+        // We need to actively REQUEST the info — it's not sent automatically.
+        // We use the STRING-BASED callback form: {callback: 'functionName'}
+
+        var bridgeAttempts = 0;
+        var maxBridgeAttempts = 10;
+
+        function requestBridgeInfo() {
+          bridgeAttempts++;
+          console.info(LOG, '🔄 Bridge request attempt #' + bridgeAttempts);
+
+          try {
+            var gn = window.gonative || window.median;
+            if (!gn) {
+              console.info(LOG, '⏳ gonative/median not available yet (attempt #' + bridgeAttempts + ')');
+              if (bridgeAttempts < maxBridgeAttempts) return; // will retry
+              console.warn(LOG, '❌ Bridge never became available after ' + bridgeAttempts + ' attempts');
+              return;
+            }
+
+            console.info(LOG, '✅ Bridge object found:', Object.keys(gn).join(', '));
+
+            // OneSignal info (primary method for Median APK)
+            if (gn.onesignal && typeof gn.onesignal.onesignalInfo === 'function') {
+              console.info(LOG, '📡 Calling gonative.onesignal.onesignalInfo...');
+              gn.onesignal.onesignalInfo({ callback: 'gonative_onesignal_info' });
+            } else {
+              console.warn(LOG, '⚠️ gonative.onesignal.onesignalInfo not available');
+            }
+
+            // Push permission + token (newer Median SDK)
+            if (gn.push) {
+              if (typeof gn.push.getPermissionStatus === 'function') {
+                console.info(LOG, '📡 Calling gonative.push.getPermissionStatus...');
+                gn.push.getPermissionStatus({ callback: 'ovelin_push_permission_cb' });
+              }
+              if (typeof gn.push.requestPermission === 'function') {
+                console.info(LOG, '📡 Calling gonative.push.requestPermission...');
+                gn.push.requestPermission({ callback: 'ovelin_push_permission_cb' });
+              }
+              if (typeof gn.push.getToken === 'function') {
+                console.info(LOG, '📡 Calling gonative.push.getToken...');
+                gn.push.getToken({ callback: 'ovelin_push_permission_cb' });
+              }
+            }
+
+            // Native bridge FCM token (legacy GoNative)
+            if (gn.nativebridge && typeof gn.nativebridge.firebaseToken === 'function') {
+              console.info(LOG, '📡 Calling gonative.nativebridge.firebaseToken...');
+              gn.nativebridge.firebaseToken({ callback: 'gonative_firebase_token' });
+            }
+
+          } catch (e) {
+            console.warn(LOG, '❌ Bridge call error (attempt #' + bridgeAttempts + '):', e && e.message);
+          }
+        }
+
+        // Try immediately
+        requestBridgeInfo();
+
+        // Retry at increasing intervals (bridge may load after page)
+        var delays = [300, 800, 1500, 2500, 4000, 6000, 9000, 13000, 18000];
+        delays.forEach(function (d) {
+          setTimeout(requestBridgeInfo, d);
+        });
+
+      })();
+    </script>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

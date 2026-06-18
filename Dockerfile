@@ -8,10 +8,7 @@ WORKDIR /app
 
 RUN npm install -g pnpm@10
 
-RUN pnpm install --frozen-lockfile
-
-ENV BASE_PATH=/
-RUN pnpm --filter @workspace/ovelin run build
+RUN pnpm install --frozen-lockfile --prod --filter @workspace/api-server --filter @workspace/db --filter @workspace/api-zod
 
 EXPOSE 7860
 

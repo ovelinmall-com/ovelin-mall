@@ -156,10 +156,16 @@ function pollMedianBridge(attempt = 1): void {
   console.info(LOG, `🔄 pollMedianBridge attempt #${attempt}`);
 
   // تحديث callbacks بدوال تمرّر للسيرفر مباشرة (بعد تسجيل الدخول)
-  (window as any).gonative_onesignal_info = (r: { userId?: string; pushToken?: string }) => {
-    console.info(LOG, "🔔 gonative_onesignal_info (React handler):", r);
-    if (r?.userId)    saveOnesignalPlayerId(r.userId).catch(() => {});
-    if (r?.pushToken) saveFcmToken(r.pushToken).catch(() => {});
+  (window as any).gonative_onesignal_info = (r: Record<string, any>) => {
+    console.info(LOG, "🔔 gonative_onesignal_info (React handler, full):", JSON.stringify(r));
+    // OneSignal SDK v5+ uses onesignalId/subscriptionId — support all field names
+    const playerId = r?.onesignalId ?? r?.subscriptionId ?? r?.userId ?? r?.playerId ?? r?.id;
+    const pushToken = r?.pushToken ?? r?.token ?? r?.fcmToken ?? r?.registrationId;
+    if (playerId) saveOnesignalPlayerId(String(playerId)).catch(() => {});
+    if (pushToken) saveFcmToken(String(pushToken)).catch(() => {});
+    if (!playerId && !pushToken) {
+      console.warn(LOG, "⚠️ gonative_onesignal_info: no player_id found. Full:", JSON.stringify(r));
+    }
   };
   (window as any).median_onesignal_info  = (window as any).gonative_onesignal_info;
 
@@ -177,9 +183,11 @@ function pollMedianBridge(attempt = 1): void {
     if (t) saveFcmToken(t).catch(() => {});
   };
   (window as any).ovelin_push_permission_cb = (r: any) => {
-    console.info(LOG, "🔔 ovelin_push_permission_cb (React handler):", r);
-    if (r?.token)    saveFcmToken(r.token).catch(() => {});
-    if (r?.playerId) saveOnesignalPlayerId(r.playerId).catch(() => {});
+    console.info(LOG, "🔔 ovelin_push_permission_cb (React handler, full):", JSON.stringify(r));
+    const pushToken = r?.token ?? r?.pushToken ?? r?.fcmToken ?? r?.registrationId;
+    const playerId  = r?.playerId ?? r?.onesignalId ?? r?.subscriptionId ?? r?.userId ?? r?.id;
+    if (pushToken) saveFcmToken(String(pushToken)).catch(() => {});
+    if (playerId)  saveOnesignalPlayerId(String(playerId)).catch(() => {});
   };
 
   // استدعاء نشط للجسر بالشكل الصحيح (string callback name)

@@ -69,17 +69,21 @@
         // not an inline function. These must be on window before the bridge fires.
 
         window.gonative_onesignal_info = function (r) {
-          console.info(LOG, '🔔 gonative_onesignal_info fired:', JSON.stringify(r));
-          if (r && r.userId) {
-            console.info(LOG, '✅ Token Generated (OneSignal player_id):', r.userId.slice(0, 12) + '…');
-            storePending('ovelin_pending_player_id', r.userId);
+          console.info(LOG, '🔔 gonative_onesignal_info fired (full response):', JSON.stringify(r));
+          // OneSignal SDK v5+ uses onesignalId/subscriptionId instead of userId
+          // Support all known field names across SDK versions
+          var playerId = r && (r.onesignalId || r.subscriptionId || r.userId || r.playerId || r.id);
+          var pushToken = r && (r.pushToken || r.token || r.fcmToken || r.registrationId);
+          if (playerId) {
+            console.info(LOG, '✅ Token Generated (OneSignal player_id):', String(playerId).slice(0, 12) + '…');
+            storePending('ovelin_pending_player_id', String(playerId));
           }
-          if (r && r.pushToken) {
-            console.info(LOG, '✅ Token Generated (FCM via OneSignal):', r.pushToken.slice(0, 12) + '…');
-            storePending('ovelin_pending_fcm_token', r.pushToken);
+          if (pushToken) {
+            console.info(LOG, '✅ Token Generated (FCM via OneSignal):', String(pushToken).slice(0, 12) + '…');
+            storePending('ovelin_pending_fcm_token', String(pushToken));
           }
-          if (!r || (!r.userId && !r.pushToken)) {
-            console.warn(LOG, '⚠️ gonative_onesignal_info fired but no userId/pushToken in response');
+          if (!playerId && !pushToken) {
+            console.warn(LOG, '⚠️ gonative_onesignal_info fired but no player_id found. Full response:', JSON.stringify(r));
           }
         };
         window.median_onesignal_info = window.gonative_onesignal_info;
@@ -110,13 +114,16 @@
         };
 
         window.ovelin_push_permission_cb = function (r) {
-          console.info(LOG, '🔔 ovelin_push_permission_cb:', JSON.stringify(r));
-          // إذا كان الإذن ممنوح واحتوى على token
-          if (r && r.token) {
-            storePending('ovelin_pending_fcm_token', r.token);
+          console.info(LOG, '🔔 ovelin_push_permission_cb (full response):', JSON.stringify(r));
+          // Support all known field names for push token
+          var pushToken = r && (r.token || r.pushToken || r.fcmToken || r.registrationId);
+          // Support all known field names for OneSignal player_id (SDK v5+)
+          var playerId = r && (r.playerId || r.onesignalId || r.subscriptionId || r.userId || r.id);
+          if (pushToken) {
+            storePending('ovelin_pending_fcm_token', String(pushToken));
           }
-          if (r && r.playerId) {
-            storePending('ovelin_pending_player_id', r.playerId);
+          if (playerId) {
+            storePending('ovelin_pending_player_id', String(playerId));
           }
         };
 

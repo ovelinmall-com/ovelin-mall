@@ -186,6 +186,15 @@ router.post("/wallet/withdraw", requireUser, async (req, res) => {
     });
     const rows = await db.select().from(transactionsTable).where(eq(transactionsTable.id, id)).limit(1);
     await notify(user.id, "withdraw", "طلب سحب قيد المراجعة", `طلب سحب بقيمة ${a.toFixed(2)} قيد المراجعة`, "/wallet");
+    req.log.info({ userId: user.id, username: user.username, amount: a, txId: id }, "🔔 إرسال إشعار push للأدمن — withdraw");
+    sendPushToAdmin({
+      title: "طلب سحب جديد",
+      body: `${user.username} — ${a.toFixed(2)} ج.س عبر ${method}`,
+      url: "/admin?tab=withdrawals",
+      tag: `withdraw-${id}`,
+    }).catch((err) => {
+      req.log.warn({ err: err?.message }, "❌ فشل إشعار الأدمن عند طلب السحب");
+    });
     await audit(user.username, "request_withdraw", "transactions", id, { amount: a, method });
     res.json(rows[0]);
   } catch (err: any) {

@@ -87,7 +87,7 @@ const VerifyEmail    = lazy(() => import("@/pages/verify-email"));
 const PushDebug      = lazy(() => import("@/pages/push-debug"));
 const NotFound       = lazy(() => import("@/pages/not-found"));
 
-const IDLE_TIMEOUT_MS = 7 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 دقايق — بعدها يرجع للرئيسية
 const LAST_ACTIVE_KEY = "ovelin_last_active";
 
 /* ── Falling pink stars — CSS-only, 11 stars, no JS animation ── */
@@ -173,6 +173,33 @@ const persister = createSyncStoragePersister({
   key: "ovelin-cache-v2",          // v2 — تجاهل الكاش القديم عند أول تشغيل
   throttleTime: 1000,              // كتابة كل ثانية بدلاً من 200ms (تخفيف الضغط على localStorage)
 });
+
+/** يراقب visibilitychange — لو غاب أكتر من 5 دقايق يرجّع للرئيسية */
+function SessionTimeoutGuard() {
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        // سجّل وقت الخروج بدقة
+        try { localStorage.setItem(LAST_ACTIVE_KEY, String(Date.now())); } catch { /* ignore */ }
+      } else {
+        // رجع للتطبيق — تحقق من المدة
+        try {
+          const last = Number(localStorage.getItem(LAST_ACTIVE_KEY) || "0");
+          if (last > 0 && Date.now() - last > IDLE_TIMEOUT_MS) {
+            localStorage.removeItem(LAST_ACTIVE_KEY);
+            navigate("/");
+          }
+        } catch { /* ignore */ }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [navigate]);
+
+  return null;
+}
 
 function PageTracker() {
   const [location] = useLocation();
@@ -313,24 +340,6 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        try { localStorage.setItem(LAST_ACTIVE_KEY, String(Date.now())); } catch { /* ignore */ }
-      } else {
-        try {
-          const last = Number(localStorage.getItem(LAST_ACTIVE_KEY) || "0");
-          if (last > 0 && Date.now() - last > IDLE_TIMEOUT_MS) {
-            setSplashDone(false);
-            setInstallDone(false);
-          }
-        } catch { /* ignore */ }
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, []);
-
   return (
     // FIX #14: reducedMotion="user" respects device Low Power Mode & accessibility settings
     // type:"tween" avoids spring physics calculation on every animation (faster on low-end CPUs)
@@ -348,6 +357,7 @@ function App() {
               {splashDone && !installDone && (
                 <AppInstallScreen onDone={() => setInstallDone(true)} />
               )}
+              <SessionTimeoutGuard />
               <PageTracker />
               <ScrollToTop />
               <EagerPreloader />

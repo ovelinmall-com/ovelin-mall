@@ -130,14 +130,30 @@ async function touchLastSeen(userId: number): Promise<void> {
     // ─── Keep-Alive: ping نفسنا كل 5 دقايق عشان HuggingFace ما ينام ───
     if (process.env["NODE_ENV"] === "production") {
       const FIVE_MINUTES = 5 * 60 * 1000;
-      setInterval(() => {
+      const keepAliveTimer = setInterval(() => {
         const req = http.request(
           { hostname: "localhost", port, path: "/api/healthz", method: "GET" },
-          (res) => { logger.debug({ status: res.statusCode }, "keep-alive ping ok"); }
+          (res) => {
+            res.resume(); // استهلك الـ body عشان الـ socket ما يتعلق
+            logger.debug({ status: res.statusCode }, "keep-alive ping ok");
+          }
         );
+        req.setTimeout(10_000, () => {
+          req.destroy(new Error("keep-alive ping timed out"));
+        });
         req.on("error", (err) => logger.warn({ err }, "keep-alive ping failed"));
         req.end();
       }, FIVE_MINUTES);
+
+      // ما نحجب إغلاق العملية لو السيرفر وقف
+      keepAliveTimer.unref();
+
+      // نوقف الـ timer لما السيرفر يُغلَق
+      server.on("close", () => {
+        clearInterval(keepAliveTimer);
+        logger.info("keep-alive ping stopped");
+      });
+
       logger.info("keep-alive ping started (every 5 min)");
     }
   });

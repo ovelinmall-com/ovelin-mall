@@ -174,10 +174,10 @@ const persister = createSyncStoragePersister({
   throttleTime: 1000,              // كتابة كل ثانية بدلاً من 200ms (تخفيف الضغط على localStorage)
 });
 
-/** يراقب visibilitychange — لو غاب أكتر من 5 دقايق يرجّع للرئيسية */
-function SessionTimeoutGuard() {
-  const [, navigate] = useLocation();
+const RELOAD_THRESHOLD_MS = 30 * 1000; // 30 ثانية — دونها لا شيء
 
+/** يراقب visibilitychange ويصحح WebView عند الرجوع من الخلفية */
+function SessionTimeoutGuard() {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === "hidden") {
@@ -187,16 +187,24 @@ function SessionTimeoutGuard() {
         // رجع للتطبيق — تحقق من المدة
         try {
           const last = Number(localStorage.getItem(LAST_ACTIVE_KEY) || "0");
-          if (last > 0 && Date.now() - last > IDLE_TIMEOUT_MS) {
-            localStorage.removeItem(LAST_ACTIVE_KEY);
-            navigate("/");
+          if (last <= 0) return;
+          const elapsed = Date.now() - last;
+          localStorage.removeItem(LAST_ACTIVE_KEY);
+
+          if (elapsed >= IDLE_TIMEOUT_MS) {
+            // ≥ 5 دقايق → hard reload للرئيسية (يصحح الـ WebView ويبدأ من أول)
+            window.location.href = "/";
+          } else if (elapsed >= RELOAD_THRESHOLD_MS) {
+            // 30 ث → 5 د → reload للصفحة الحالية (يصحح أي تجمد في الـ WebView)
+            window.location.reload();
           }
+          // أقل من 30 ثانية → لا شيء
         } catch { /* ignore */ }
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [navigate]);
+  }, []);
 
   return null;
 }

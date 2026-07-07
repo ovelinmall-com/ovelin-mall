@@ -18,4 +18,25 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
+// ── فحص مبكر قبل React ──────────────────────────────────────────
+// لو التطبيق أُعيد تشغيله بعد غياب ≥5 دقايق (Android قتل الـ process)
+// نوجّه فوراً للرئيسية قبل ما يبدأ React حتى نتفادى الشاشة البيضاء.
+(function earlyResumeCheck() {
+  try {
+    const IDLE_MS = 5 * 60 * 1000;
+    const KEY = "ovelin_last_active";
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const elapsed = Date.now() - Number(raw);
+      if (elapsed >= IDLE_MS && window.location.pathname !== "/") {
+        localStorage.removeItem(KEY);
+        window.location.replace("/");
+        return; // لا تكمل تحميل React
+      }
+      // سواء استغرق وقتاً أو لا — امسح المفتاح، الـ SessionTimeoutGuard سيعيد تسجيله
+      localStorage.removeItem(KEY);
+    }
+  } catch { /* localStorage غير متاح */ }
+})();
+
 createRoot(document.getElementById("root")!).render(<App />);

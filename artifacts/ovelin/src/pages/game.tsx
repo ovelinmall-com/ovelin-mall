@@ -290,6 +290,7 @@ export default function Game() {
   const [smmCommentInput, setSmmCommentInput] = useState("");
   const [smmResultOpen, setSmmResultOpen] = useState(false);
   const [smmResult, setSmmResult] = useState<{ orderId: number; smmOrderId: string | null } | null>(null);
+  const smmSubmittingRef = useRef(false); // حاجب synchronous ضد double-tap
 
   const [error, setError] = useState<string | null>(null);
 
@@ -463,6 +464,7 @@ export default function Game() {
       comments?: string;
     }) => smmOrder(productId, link, quantity, comments),
     onSuccess: (data) => {
+      smmSubmittingRef.current = false;
       setSmmResult({ orderId: data.order.id, smmOrderId: data.smmOrderId });
       setSmmSelectedProduct(null);
       setSmmResultOpen(true);
@@ -470,6 +472,7 @@ export default function Game() {
       qc.invalidateQueries({ queryKey: getGetMyDashboardQueryKey() });
     },
     onError: (err: any) => {
+      smmSubmittingRef.current = false;
       const msg = err?.data?.error ?? err?.message ?? "فشل الطلب، حاول مرة أخرى";
       setError(msg);
     },
@@ -2069,15 +2072,16 @@ export default function Game() {
                     إلغاء
                   </button>
                   <button
-                    onClick={() =>
-                      smmSelectedProduct &&
+                    onClick={() => {
+                      if (smmSubmittingRef.current || smmBuyMutation.isPending || !smmSelectedProduct) return;
+                      smmSubmittingRef.current = true;
                       smmBuyMutation.mutate({
                         productId: smmSelectedProduct.id,
                         link: smmLink,
                         quantity: smmEffectiveQty,
                         comments: isCustomComments ? smmComments.join("\n") : undefined,
-                      })
-                    }
+                      });
+                    }}
                     disabled={
                       smmBuyMutation.isPending ||
                       !smmQtyEntered ||

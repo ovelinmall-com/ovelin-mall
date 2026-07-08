@@ -87,7 +87,6 @@ const VerifyEmail    = lazy(() => import("@/pages/verify-email"));
 const PushDebug      = lazy(() => import("@/pages/push-debug"));
 const NotFound       = lazy(() => import("@/pages/not-found"));
 
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 دقايق — بعدها يرجع للرئيسية
 const LAST_ACTIVE_KEY = "ovelin_last_active";
 
 /* ── Falling pink stars — CSS-only, 11 stars, no JS animation ── */
@@ -174,40 +173,10 @@ const persister = createSyncStoragePersister({
   throttleTime: 1000,              // كتابة كل ثانية بدلاً من 200ms (تخفيف الضغط على localStorage)
 });
 
-const RELOAD_THRESHOLD_MS = 30 * 1000; // 30 ثانية — دونها لا شيء
-
-/** يراقب visibilitychange ويصحح WebView عند الرجوع من الخلفية */
-function SessionTimeoutGuard() {
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        // سجّل وقت الخروج بدقة
-        try { localStorage.setItem(LAST_ACTIVE_KEY, String(Date.now())); } catch { /* ignore */ }
-      } else {
-        // رجع للتطبيق — تحقق من المدة
-        try {
-          const last = Number(localStorage.getItem(LAST_ACTIVE_KEY) || "0");
-          if (last <= 0) return;
-          const elapsed = Date.now() - last;
-          localStorage.removeItem(LAST_ACTIVE_KEY);
-
-          if (elapsed >= IDLE_TIMEOUT_MS) {
-            // ≥ 5 دقايق → hard reload للرئيسية (يصحح الـ WebView ويبدأ من أول)
-            window.location.href = "/";
-          } else if (elapsed >= RELOAD_THRESHOLD_MS) {
-            // 30 ث → 5 د → reload للصفحة الحالية (يصحح أي تجمد في الـ WebView)
-            window.location.reload();
-          }
-          // أقل من 30 ثانية → لا شيء
-        } catch { /* ignore */ }
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, []);
-
-  return null;
-}
+// ملاحظة: منطق استعادة الجلسة بعد الخلفية (WebView white screen fix)
+// انتقل بالكامل لـ main.tsx — يعتمد على median_app_resumed() native
+// callback من Median.co بدل الاعتماد فقط على visibilitychange.
+// راجع main.tsx للتفاصيل والمرجع الرسمي.
 
 function PageTracker() {
   const [location] = useLocation();
@@ -365,7 +334,6 @@ function App() {
               {splashDone && !installDone && (
                 <AppInstallScreen onDone={() => setInstallDone(true)} />
               )}
-              <SessionTimeoutGuard />
               <PageTracker />
               <ScrollToTop />
               <EagerPreloader />

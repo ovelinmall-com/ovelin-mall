@@ -89,8 +89,10 @@ router.post("/auth/call-verify/start", startLimiter, async (req: Request, res: R
       expiresIn: session.expiresIn,
     });
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     logger.error({ err }, "فشل إنشاء جلسة CallVerify");
-    res.status(500).json({ error: "تعذر بدء التحقق — حاول مجدداً" });
+    // DEBUG: نكشف الخطأ الحقيقي مؤقتاً للتشخيص
+    res.status(500).json({ error: "تعذر بدء التحقق — حاول مجدداً", _debug: errMsg });
   }
 });
 

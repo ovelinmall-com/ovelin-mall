@@ -19,21 +19,34 @@ export interface CallSessionStatus {
 
 /** يفتح جلسة تحقق جديدة للرقم المعطى */
 export async function startCallSession(phone: string): Promise<CallSession> {
-  const res = await fetch(`${CALLVERIFY_BASE}/sessions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${CALLVERIFY_API_KEY}`,
-    },
-    body: JSON.stringify({ phone }),
-  });
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 20_000); // 20 ثانية قبل ما يستسلم
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as { detail?: string };
-    throw new Error(err.detail ?? `CallVerify error ${res.status}`);
+  try {
+    const res = await fetch(`${CALLVERIFY_BASE}/sessions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${CALLVERIFY_API_KEY}`,
+      },
+      body: JSON.stringify({ phone }),
+      signal: ac.signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { detail?: string };
+      throw new Error(err.detail ?? `CallVerify error ${res.status}`);
+    }
+
+    return res.json() as Promise<CallSession>;
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("خدمة التحقق بطيئة الاستجابة — أعد المحاولة");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-
-  return res.json() as Promise<CallSession>;
 }
 
 /** يستعلم عن حالة الجلسة — يُعيد الحالة فوراً (النظام يعمل بـ long-poll داخلياً) */

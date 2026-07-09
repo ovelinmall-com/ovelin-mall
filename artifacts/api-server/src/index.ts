@@ -145,16 +145,23 @@ async function touchLastSeen(userId: number): Promise<void> {
         req.end();
       }, FIVE_MINUTES);
 
-      // ما نحجب إغلاق العملية لو السيرفر وقف
-      keepAliveTimer.unref();
+      // ping خدمة CallVerify (HF Space منفصل) عشان ما تنام وتسبب "تعذر التحقق"
+      const cvTimer = setInterval(() => {
+        fetch("https://skandar5288-callverify-backend.hf.space/api/health", {
+          signal: AbortSignal.timeout(10_000),
+        }).catch(() => { /* تجاهل — المهم إبقاؤها مستيقظة */ });
+      }, FIVE_MINUTES);
 
-      // نوقف الـ timer لما السيرفر يُغلَق
+      keepAliveTimer.unref();
+      cvTimer.unref();
+
       server.on("close", () => {
         clearInterval(keepAliveTimer);
+        clearInterval(cvTimer);
         logger.info("keep-alive ping stopped");
       });
 
-      logger.info("keep-alive ping started (every 5 min)");
+      logger.info("keep-alive ping started (every 5 min) — main + callverify");
     }
   });
 })();

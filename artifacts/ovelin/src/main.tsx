@@ -27,30 +27,30 @@ import "./index.css";
 // حتى لو تم إعادة تحميل الصفحة بالكامل من الصفر (بعد قتل الـ process).
 // المرجع: https://docs.median.co/docs/app-resumed-callback
 
-const IDLE_MS = 5 * 60 * 1000; // ≥5 دقايق غياب → رجوع للرئيسية (hard recovery)
-const RELOAD_MS = 30 * 1000;   // 30 ث → 5 د → إعادة تحميل الصفحة الحالية فقط
+const IDLE_MS = 5 * 60 * 1000;
 const LAST_ACTIVE_KEY = "ovelin_last_active";
 
+// الإصلاح الفعلي: window.location.reload() لا window.location.replace("/")
+// لأن replace("/") لا تفعل شيئاً لو المستخدم أصلاً على "/" (same-URL no-op).
+// reload() هي الوحيدة التي تجبر الـ WebView على إعادة التحميل الكامل.
 function recoverFromStaleSession() {
   try {
     const raw = localStorage.getItem(LAST_ACTIVE_KEY);
     if (!raw) return;
     const elapsed = Date.now() - Number(raw);
     localStorage.removeItem(LAST_ACTIVE_KEY);
-
     if (elapsed >= IDLE_MS) {
-      window.location.replace("/"); // إعادة كاملة للرئيسية
-    } else if (elapsed >= RELOAD_MS) {
-      window.location.reload(); // يصحح تجمد الـ WebView دون فقدان مكان المستخدم
+      window.location.reload(); // إعادة تحميل كاملة — الحل الحقيقي للـ WebView GPU
     }
   } catch { /* localStorage غير متاح */ }
 }
 
-// 1) الحل الأساسي — Median تستدعي هذه الدالة native مباشرة عند العودة،
-//    سواء كانت نفس الصفحة أو صفحة أُعيد تحميلها من الصفر بعد قتل الـ process.
+// A) Median.co SDK الحديث — native callback مباشر من Kotlin/Java
 (window as any).median_app_resumed = recoverFromStaleSession;
+// B) Median.co SDK القديم (GoNative) — نفس الآلية باسم مختلف
+(window as any).gonative_app_resumed = recoverFromStaleSession;
 
-// 2) شبكة أمان — تغطي حالات المتصفح العادي / PWA وأي APK آخر غير Median
+// C) visibilitychange — يسجّل وقت الخروج، ويصحح عند العودة في المتصفح/PWA
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     try { localStorage.setItem(LAST_ACTIVE_KEY, String(Date.now())); } catch { /* ignore */ }
@@ -59,8 +59,8 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// 3) فحص فوري عند الإقلاع نفسه — يغطي حالة إعادة تشغيل كاملة للتطبيق
-//    وصل فيها median_app_resumed متأخراً أو لم يُستدعَ لأي سبب
-recoverFromStaleSession();
+// D) فحص عند اكتمال تحميل الصفحة — يغطي إعادة تشغيل كاملة للـ process
+//    (بعد "load" يكون الـ WebView جاهزاً فعلاً لاستقبال reload)
+window.addEventListener("load", recoverFromStaleSession, { once: true });
 
 createRoot(document.getElementById("root")!).render(<App />);

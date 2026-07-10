@@ -10,12 +10,17 @@ import android.os.Bundle
 import android.view.View
 import android.webkit.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.onesignal.OneSignal
+import com.onesignal.debug.LogLevel
 import com.ovelinmall.app.databinding.ActivityMainBinding
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val TARGET_URL = "https://ovelinmall-ovelin-mall.hf.space/"
+    private val ONESIGNAL_APP_ID = "f2c9dd19-71f0-4af3-8a5b-12f34d99e76a"
 
     private val STABILITY_JS = """
         (function() {
@@ -37,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        initOneSignal()
         setupWebView()
         setupSwipeRefresh()
 
@@ -44,6 +50,14 @@ class MainActivity : AppCompatActivity() {
             binding.webView.loadUrl(TARGET_URL)
         } else {
             showNoConnection()
+        }
+    }
+
+    private fun initOneSignal() {
+        OneSignal.Debug.logLevel = LogLevel.NONE
+        OneSignal.initWithContext(this, ONESIGNAL_APP_ID)
+        lifecycleScope.launch {
+            OneSignal.Notifications.requestPermission(true)
         }
     }
 

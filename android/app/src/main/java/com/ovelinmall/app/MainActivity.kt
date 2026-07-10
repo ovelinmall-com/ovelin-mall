@@ -116,7 +116,7 @@ class MainActivity : AppCompatActivity() {
 
             CookieManager.getInstance().apply {
                 setAcceptCookie(true)
-                setAcceptThirdPartyCookies(this@apply, true)
+                setAcceptThirdPartyCookies(binding.webView, true)
             }
         }
     }

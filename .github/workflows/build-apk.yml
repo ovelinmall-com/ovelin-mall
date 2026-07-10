@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 defaults:
   run:
     working-directory: android
@@ -45,13 +48,19 @@ jobs:
 
       - name: Rename APK
         run: |
-          mkdir -p ../release
-          cp app/build/outputs/apk/release/app-release.apk ../release/OvelinMall.apk
+          mkdir -p release
+          cp app/build/outputs/apk/release/app-release.apk release/OvelinMall.apk
 
       - name: Get current date
         id: date
-        working-directory: .
         run: echo "date=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OvelinMall-APK
+          path: android/release/OvelinMall.apk
+          retention-days: 90
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -67,7 +76,7 @@ jobs:
             3. ثبّت التطبيق
 
             > التطبيق يفتح الموقع https://ovelinmall-ovelin-mall.hf.space/ مباشرة — أي تعديل على الموقع يظهر تلقائياً.
-          files: release/OvelinMall.apk
+          files: android/release/OvelinMall.apk
           draft: false
           prerelease: false
         env:

@@ -35,22 +35,48 @@ class MainActivity : AppCompatActivity() {
         })();
     """.trimIndent()
 
-    // Mimics the Median.co (gonative) bridge the website checks for
+    // Full Median.co (gonative) bridge the website expects
     private val BRIDGE_JS = """
         (function() {
-            if (window.gonative) return;
+            if (window.gonative && window.gonative._fullyLoaded) return;
             window.gonative = {
+                _fullyLoaded: true,
                 isNative: true,
                 platform: 'android',
                 version: '1.0.0',
+
                 onesignal: {
+                    // Called by website to link device to a user account
+                    login: function(externalId, callback) {
+                        try {
+                            OvelinBridge.oneSignalLogin(externalId);
+                            if (typeof callback === 'function') callback({ success: true });
+                        } catch(e) {
+                            if (typeof callback === 'function') callback({ success: false, error: String(e) });
+                        }
+                    },
+                    // Called by website to unlink user account
+                    logout: function(callback) {
+                        try {
+                            OvelinBridge.oneSignalLogout();
+                            if (typeof callback === 'function') callback({ success: true });
+                        } catch(e) {}
+                    },
+                    // Called by website to get the OneSignal player/subscription ID
                     getPlayerId: function(callback) {
                         try {
                             var pid = OvelinBridge.getOneSignalPlayerId();
                             if (typeof callback === 'function') callback(pid);
                         } catch(e) {}
+                    },
+                    getTags: function(callback) {
+                        if (typeof callback === 'function') callback({});
+                    },
+                    sendTag: function(key, value, callback) {
+                        if (typeof callback === 'function') callback({ success: true });
                     }
                 },
+
                 registration: {
                     getRegistrationId: function(callback) {
                         try {
@@ -59,9 +85,11 @@ class MainActivity : AppCompatActivity() {
                         } catch(e) {}
                     }
                 },
+
                 statusbar:  { setStyle: function() {} },
                 sidebar:    { open: function() {}, close: function() {} }
             };
+
             document.dispatchEvent(new Event('gonative.ready'));
         })();
     """.trimIndent()
@@ -96,7 +124,6 @@ class MainActivity : AppCompatActivity() {
         binding.webView.apply {
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
-            // Java bridge callable from JS via OvelinBridge.xxx()
             addJavascriptInterface(OvelinBridgeInterface(), "OvelinBridge")
 
             settings.apply {
@@ -114,7 +141,6 @@ class MainActivity : AppCompatActivity() {
                 allowFileAccess = true
                 javaScriptCanOpenWindowsAutomatically = true
                 setSupportMultipleWindows(false)
-                // Append "gonative" to user-agent so server-side checks pass too
                 userAgentString = "$userAgentString gonative"
             }
 
@@ -131,7 +157,6 @@ class MainActivity : AppCompatActivity() {
                     super.onPageFinished(view, url)
                     binding.progressBar.visibility = View.GONE
                     binding.swipeRefresh.isRefreshing = false
-                    // Re-inject after load in case SPA replaced window
                     view?.evaluateJavascript(BRIDGE_JS, null)
                     view?.evaluateJavascript(STABILITY_JS, null)
                 }
@@ -177,10 +202,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Native methods accessible from JavaScript */
+    /** Native methods callable from JavaScript */
     inner class OvelinBridgeInterface {
+
         @JavascriptInterface
         fun getOneSignalPlayerId(): String = OneSignal.User.onesignalId ?: ""
+
+        /** Link this device to a user account in OneSignal */
+        @JavascriptInterface
+        fun oneSignalLogin(externalId: String) {
+            lifecycleScope.launch {
+                OneSignal.login(externalId)
+            }
+        }
+
+        /** Unlink user account from this device */
+        @JavascriptInterface
+        fun oneSignalLogout() {
+            lifecycleScope.launch {
+                OneSignal.logout()
+            }
+        }
 
         @JavascriptInterface
         fun isNativeApp(): Boolean = true

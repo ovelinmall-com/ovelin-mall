@@ -4,9 +4,8 @@
         <item name="colorPrimary">@color/primary_pink</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorAccent">@color/primary_pink</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <!-- Light icons on status bar and nav bar, system handles the colors -->
+        <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

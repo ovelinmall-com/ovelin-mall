@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary_pink">#C2185B</color>
+    <color name="primary_dark">#880E4F</color>
+    <color name="splash_bg">#8B0040</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="status_bar">#7B003A</color>
+</resources>

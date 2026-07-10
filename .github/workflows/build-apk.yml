@@ -5,6 +5,10 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+defaults:
+  run:
+    working-directory: android
+
 jobs:
   build:
     name: Build Release APK
@@ -22,7 +26,7 @@ jobs:
           cache: gradle
 
       - name: Make gradlew executable
-        run: chmod +x ./gradlew
+        run: chmod +x gradlew
 
       - name: Generate Keystore
         run: |
@@ -41,11 +45,12 @@ jobs:
 
       - name: Rename APK
         run: |
-          mkdir -p release
-          cp app/build/outputs/apk/release/app-release.apk release/OvelinMall.apk
+          mkdir -p ../release
+          cp app/build/outputs/apk/release/app-release.apk ../release/OvelinMall.apk
 
       - name: Get current date
         id: date
+        working-directory: .
         run: echo "date=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
 
       - name: Create Release
@@ -54,19 +59,14 @@ jobs:
           tag_name: v${{ steps.date.outputs.date }}
           name: "Ovelin Mall APK - ${{ steps.date.outputs.date }}"
           body: |
-            ## تحميل تطبيق Ovelin Mall
-
-            📱 **تطبيق Ovelin Mall** - النسخة الرسمية
+            ## تحميل تطبيق Ovelin Mall 📱
 
             ### طريقة التثبيت:
             1. حمّل ملف `OvelinMall.apk`
             2. فعّل "تثبيت من مصادر غير معروفة" في إعدادات الجهاز
             3. ثبّت التطبيق
 
-            ### ملاحظة:
-            - التطبيق يفتح الموقع https://ovelinmall-ovelin-mall.hf.space/ مباشرة
-            - أي تعديل على الموقع يظهر تلقائياً في التطبيق
-            - يتطلب اتصالاً بالإنترنت
+            > التطبيق يفتح الموقع https://ovelinmall-ovelin-mall.hf.space/ مباشرة — أي تعديل على الموقع يظهر تلقائياً.
           files: release/OvelinMall.apk
           draft: false
           prerelease: false

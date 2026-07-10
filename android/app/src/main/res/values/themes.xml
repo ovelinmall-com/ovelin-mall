@@ -5,14 +5,13 @@
         <item name="colorPrimary">@color/primary_pink</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorAccent">@color/primary_pink</item>
-        <item name="android:statusBarColor">@color/status_bar</item>
-        <item name="android:navigationBarColor">@color/primary_dark</item>
-        <item name="android:windowBackground">@color/splash_bg</item>
-    </style>
-
-    <style name="Theme.OvelinMall.Splash" parent="Theme.OvelinMall">
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowBackground">@color/splash_bg</item>
+        <!-- Status bar and nav bar: transparent/system default -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
 </resources>

@@ -5,10 +5,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.webkit.*
-import android.widget.Toast
+import android.view.WindowInsetsController
 import androidx.appcompat.app.AppCompatActivity
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.ovelinmall.app.databinding.ActivityMainBinding
@@ -18,9 +19,36 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val TARGET_URL = "https://ovelinmall-ovelin-mall.hf.space/"
 
+    // JS injected after page load to:
+    // 1. Remove lazy loading so images render immediately
+    // 2. Preload all images in viewport and beyond
+    private val STABILITY_JS = """
+        (function() {
+            // Force all images to load eagerly
+            document.querySelectorAll('img[loading="lazy"]').forEach(function(img) {
+                img.setAttribute('loading', 'eager');
+            });
+            // Remove IntersectionObserver-based lazy loaders by eager-loading all images
+            document.querySelectorAll('img[data-src]').forEach(function(img) {
+                if (img.dataset.src) { img.src = img.dataset.src; }
+            });
+            document.querySelectorAll('img[data-lazy]').forEach(function(img) {
+                if (img.dataset.lazy) { img.src = img.dataset.lazy; }
+            });
+            // Force background images to load
+            var style = document.createElement('style');
+            style.textContent = '* { -webkit-backface-visibility: hidden; } img { image-rendering: auto !important; }';
+            document.head.appendChild(style);
+        })();
+    """.trimIndent()
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Make status bar and nav bar transparent with dark icons
+        makeSystemBarsTransparent()
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -34,9 +62,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun makeSystemBarsTransparent() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.let { controller ->
+                controller.setSystemBarsAppearance(
+                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                    WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                    WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                )
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+                View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            )
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         binding.webView.apply {
+            // Hardware acceleration for stable rendering
+            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            // Pre-rasterize off-screen tiles so content doesn't "build" while scrolling
+            setOffscreenPreRaster(true)
+
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -46,14 +98,15 @@ class MainActivity : AppCompatActivity() {
                 setSupportZoom(false)
                 builtInZoomControls = false
                 displayZoomControls = false
+                // Use cache for faster repeat loads and stable content
                 cacheMode = WebSettings.LOAD_DEFAULT
                 mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                 mediaPlaybackRequiresUserGesture = false
                 allowFileAccess = true
                 javaScriptCanOpenWindowsAutomatically = true
                 setSupportMultipleWindows(false)
-                userAgentString = userAgentString.replace("Mobile", "").replace("Android", "") +
-                        " OvelinMallApp/1.0"
+                // Increase rendering quality
+                layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
             }
 
             webViewClient = object : WebViewClient() {
@@ -61,12 +114,15 @@ class MainActivity : AppCompatActivity() {
                     super.onPageStarted(view, url, favicon)
                     binding.progressBar.visibility = View.VISIBLE
                     binding.noConnectionLayout.visibility = View.GONE
+                    binding.webView.visibility = View.VISIBLE
                 }
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
                     binding.progressBar.visibility = View.GONE
                     binding.swipeRefresh.isRefreshing = false
+                    // Inject stability script after page finishes loading
+                    view?.evaluateJavascript(STABILITY_JS, null)
                 }
 
                 override fun onReceivedError(
@@ -86,8 +142,6 @@ class MainActivity : AppCompatActivity() {
                     view: WebView?,
                     request: WebResourceRequest?
                 ): Boolean {
-                    val url = request?.url?.toString() ?: return false
-                    // Stay in the WebView for same domain
                     return false
                 }
             }
@@ -104,10 +158,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onJsAlert(
-                    view: WebView?,
-                    url: String?,
-                    message: String?,
-                    result: JsResult?
+                    view: WebView?, url: String?, message: String?, result: JsResult?
                 ): Boolean {
                     result?.confirm()
                     return true
@@ -129,6 +180,7 @@ class MainActivity : AppCompatActivity() {
             setOnRefreshListener {
                 if (isConnected()) {
                     binding.noConnectionLayout.visibility = View.GONE
+                    binding.webView.visibility = View.VISIBLE
                     binding.webView.reload()
                 } else {
                     isRefreshing = false

@@ -5,7 +5,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.webkit.*
@@ -33,6 +32,37 @@ class MainActivity : AppCompatActivity() {
             document.querySelectorAll('img[data-lazy]').forEach(function(img) {
                 if (img.dataset.lazy) { img.src = img.dataset.lazy; }
             });
+        })();
+    """.trimIndent()
+
+    // Mimics the Median.co (gonative) bridge the website checks for
+    private val BRIDGE_JS = """
+        (function() {
+            if (window.gonative) return;
+            window.gonative = {
+                isNative: true,
+                platform: 'android',
+                version: '1.0.0',
+                onesignal: {
+                    getPlayerId: function(callback) {
+                        try {
+                            var pid = OvelinBridge.getOneSignalPlayerId();
+                            if (typeof callback === 'function') callback(pid);
+                        } catch(e) {}
+                    }
+                },
+                registration: {
+                    getRegistrationId: function(callback) {
+                        try {
+                            var pid = OvelinBridge.getOneSignalPlayerId();
+                            if (typeof callback === 'function') callback({ oneSignalUserId: pid });
+                        } catch(e) {}
+                    }
+                },
+                statusbar:  { setStyle: function() {} },
+                sidebar:    { open: function() {}, close: function() {} }
+            };
+            document.dispatchEvent(new Event('gonative.ready'));
         })();
     """.trimIndent()
 
@@ -66,6 +96,9 @@ class MainActivity : AppCompatActivity() {
         binding.webView.apply {
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
+            // Java bridge callable from JS via OvelinBridge.xxx()
+            addJavascriptInterface(OvelinBridgeInterface(), "OvelinBridge")
+
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -81,11 +114,14 @@ class MainActivity : AppCompatActivity() {
                 allowFileAccess = true
                 javaScriptCanOpenWindowsAutomatically = true
                 setSupportMultipleWindows(false)
+                // Append "gonative" to user-agent so server-side checks pass too
+                userAgentString = "$userAgentString gonative"
             }
 
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                     super.onPageStarted(view, url, favicon)
+                    view?.evaluateJavascript(BRIDGE_JS, null)
                     binding.progressBar.visibility = View.VISIBLE
                     binding.noConnectionLayout.visibility = View.GONE
                     binding.webView.visibility = View.VISIBLE
@@ -95,6 +131,8 @@ class MainActivity : AppCompatActivity() {
                     super.onPageFinished(view, url)
                     binding.progressBar.visibility = View.GONE
                     binding.swipeRefresh.isRefreshing = false
+                    // Re-inject after load in case SPA replaced window
+                    view?.evaluateJavascript(BRIDGE_JS, null)
                     view?.evaluateJavascript(STABILITY_JS, null)
                 }
 
@@ -114,9 +152,7 @@ class MainActivity : AppCompatActivity() {
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
                     request: WebResourceRequest?
-                ): Boolean {
-                    return false
-                }
+                ): Boolean = false
             }
 
             webChromeClient = object : WebChromeClient() {
@@ -139,6 +175,18 @@ class MainActivity : AppCompatActivity() {
                 setAcceptThirdPartyCookies(binding.webView, true)
             }
         }
+    }
+
+    /** Native methods accessible from JavaScript */
+    inner class OvelinBridgeInterface {
+        @JavascriptInterface
+        fun getOneSignalPlayerId(): String = OneSignal.User.onesignalId ?: ""
+
+        @JavascriptInterface
+        fun isNativeApp(): Boolean = true
+
+        @JavascriptInterface
+        fun getPlatform(): String = "android"
     }
 
     private fun setupSwipeRefresh() {

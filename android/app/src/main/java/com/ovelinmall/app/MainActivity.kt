@@ -86,8 +86,6 @@ class MainActivity : AppCompatActivity() {
         binding.webView.apply {
             // Hardware acceleration for stable rendering
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            // Pre-rasterize off-screen tiles so content doesn't "build" while scrolling
-            setOffscreenPreRaster(true)
 
             settings.apply {
                 javaScriptEnabled = true

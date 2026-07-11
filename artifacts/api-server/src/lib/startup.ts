@@ -7,6 +7,7 @@ import { initPush } from "./services/pushService";
 import { initFcmAdmin } from "./services/fcmService";
 import { startSmmStatusWorker } from "./services/smmStatusWorker";
 import { initWhatsApp } from "../services/whatsapp-gateway.js";
+import { warmUpCallVerify } from "./callVerifyService";
 
 // ============================================================
 // WARNING — The ONLY database for this project is Neon.
@@ -241,4 +242,6 @@ export async function runStartupTasks(): Promise<void> {
   initWhatsApp().catch((err) =>
     logger.warn({ err }, "WhatsApp Gateway لم يبدأ — راجع لوج الاتصال"),
   );
+  // إيقاظ خدمة CallVerify مبكراً عند بدء السيرفر — تمنع cold-start delay عند أول تسجيل
+  warmUpCallVerify();
 }

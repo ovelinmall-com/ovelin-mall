@@ -3,6 +3,19 @@
 
 const CALLVERIFY_BASE = "https://skandar5288-callverify-backend.hf.space/api";
 const CALLVERIFY_API_KEY = "45ad85bf-b683-4188-9aed-11424733600b";
+const CALLVERIFY_ROOT   = "https://skandar5288-callverify-backend.hf.space";
+
+/**
+ * يبعث طلب GET بسيط لإيقاظ خدمة CallVerify من السبات (HF free tier).
+ * النتيجة مُتجاهلة — الهدف فقط إيقاظ الحاوية قبل أول طلب حقيقي.
+ */
+export function warmUpCallVerify(): void {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 90_000); // 90s كافية لأي cold-start
+  fetch(CALLVERIFY_ROOT, { signal: ac.signal })
+    .then(() => clearTimeout(timer))
+    .catch(() => clearTimeout(timer));
+}
 
 export interface CallSession {
   sessionId: string;
@@ -20,7 +33,8 @@ export interface CallSessionStatus {
 /** يفتح جلسة تحقق جديدة للرقم المعطى — يعيد المحاولة حتى 3 مرات */
 export async function startCallSession(phone: string): Promise<CallSession> {
   const MAX_RETRIES = 3;
-  const TIMEOUT_MS  = 18_000; // 18 ثانية لكل محاولة (HuggingFace قد يكون بارداً)
+  // رُفع من 18s → 60s لاستيعاب cold-start خدمة HuggingFace المجانية (قد تأخذ 30-60 ثانية)
+  const TIMEOUT_MS  = 60_000;
 
   let lastErr: unknown;
 

@@ -10,15 +10,19 @@ const router: IRouter = Router();
 
 /**
  * خريطة server-side موثوقة: sessionId → normalizedPhone
- * هذا يمنع أي عميل من ربط التحقق برقم مختلف عبر تعديل query param.
  */
 const sessionPhoneMap = new Map<string, string>();
 
-// تنظيف دوري للجلسات المنتهية (كل 5 دقائق)
-setInterval(() => {
-  // لا نعرف الـ expiresAt هنا، لكن الـ CallVerify يرجع expired:true فور الانتهاء
-  // نمسح المفاتيح التي تجاوزت 20 دقيقة (أمان)
-}, 5 * 60_000);
+/**
+ * جلسات نشطة per-phone — تمنع فتح جلسة جديدة إذا كانت هناك جلسة لم تنتهِ بعد
+ * للرقم نفسه (حالة: المستخدم يعود لتعديل بيانات دون تغيير الرقم ثم يضغط إنشاء حساب)
+ */
+interface ActiveSession {
+  sessionId: string;
+  callNumber: string;
+  expiresAt: number;
+}
+const phoneActiveSession = new Map<string, ActiveSession>();
 
 const startLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -35,7 +39,8 @@ const startLimiter = rateLimit({
 
 /**
  * POST /api/auth/call-verify/start
- * يفتح جلسة تحقق — يرجع رقم الاتصال والـ sessionId
+ * يفتح جلسة تحقق — يرجع رقم الاتصال والـ sessionId.
+ * إن كانت هناك جلسة نشطة لنفس الرقم يُعيد نفس الجلسة مع الوقت المتبقي.
  */
 router.post("/auth/call-verify/start", startLimiter, async (req: Request, res: Response) => {
   try {
@@ -74,12 +79,41 @@ router.post("/auth/call-verify/start", startLimiter, async (req: Request, res: R
       return;
     }
 
+    // ── إعادة الجلسة النشطة إن وُجدت ──────────────────────────────────────
+    const active = phoneActiveSession.get(normalized);
+    if (active && active.expiresAt > Date.now()) {
+      const remainingSeconds = Math.ceil((active.expiresAt - Date.now()) / 1000);
+      if (!sessionPhoneMap.has(active.sessionId)) {
+        sessionPhoneMap.set(active.sessionId, normalized);
+      }
+      logger.info(
+        { phone: normalized, sessionId: active.sessionId, remainingSeconds },
+        "♻️  إعادة استخدام جلسة تحقق نشطة"
+      );
+      res.json({
+        sessionId: active.sessionId,
+        callNumber: active.callNumber,
+        expiresIn: remainingSeconds,
+      });
+      return;
+    }
+
+    // ── فتح جلسة جديدة ─────────────────────────────────────────────────────
     const session = await startCallSession(normalized);
 
-    // ✅ احفظ الربط بين الجلسة والرقم في server-side موثوق
     sessionPhoneMap.set(session.sessionId, normalized);
-    // أزل الجلسة بعد 20 دقيقة (expiresIn يكون عادةً 900 ثانية = 15 دقيقة)
     setTimeout(() => sessionPhoneMap.delete(session.sessionId), 20 * 60_000);
+
+    const expiresAt = Date.now() + session.expiresIn * 1000;
+    phoneActiveSession.set(normalized, {
+      sessionId: session.sessionId,
+      callNumber: session.callNumber,
+      expiresAt,
+    });
+    setTimeout(() => {
+      const cur = phoneActiveSession.get(normalized);
+      if (cur?.sessionId === session.sessionId) phoneActiveSession.delete(normalized);
+    }, session.expiresIn * 1000 + 30_000);
 
     logger.info({ phone: normalized, sessionId: session.sessionId }, "📞 جلسة تحقق بالاتصال بدأت");
 
@@ -91,18 +125,14 @@ router.post("/auth/call-verify/start", startLimiter, async (req: Request, res: R
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     logger.error({ err }, "فشل إنشاء جلسة CallVerify");
-    // DEBUG: نكشف الخطأ الحقيقي مؤقتاً للتشخيص
-    res.status(500).json({ error: "تعذر بدء التحقق — حاول مجدداً", _debug: errMsg });
+    res.status(500).json({ error: errMsg || "تعذر بدء التحقق — حاول مجدداً" });
   }
 });
 
 /**
  * GET /api/auth/call-verify/poll/:sessionId
- * يُوكّل الاستعلام لخدمة CallVerify (long-poll حتى 25 ثانية)
- * عند التحقق يُضيف الرقم المُخزَّن server-side لـ verifiedPhones
  */
 router.get("/auth/call-verify/poll/:sessionId", async (req: Request, res: Response) => {
-  // ضمان أن sessionId سلسلة نصية (يتجنب string | string[])
   const rawId = req.params["sessionId"];
   const sessionId = Array.isArray(rawId) ? rawId[0] : rawId;
 
@@ -111,16 +141,13 @@ router.get("/auth/call-verify/poll/:sessionId", async (req: Request, res: Respon
     return;
   }
 
-  // ✅ الرقم من الخريطة الموثوقة على الـ server — لا من الـ client
   const trustedPhone = sessionPhoneMap.get(sessionId);
   if (!trustedPhone) {
-    // الجلسة غير معروفة أو انتهت صلاحيتها
     res.json({ verified: false, expired: true, phone: null, remainingSeconds: 0 });
     return;
   }
 
   try {
-    // long-poll حقيقي: نلوف كل ثانية حتى 28 ثانية
     const deadline = Date.now() + 28_000;
     let status: Awaited<ReturnType<typeof pollCallSession>> = {
       verified: false,
@@ -136,29 +163,28 @@ router.get("/auth/call-verify/poll/:sessionId", async (req: Request, res: Respon
       try {
         status = await pollCallSession(sessionId, ac.signal);
       } catch (loopErr: unknown) {
-        // AbortError من timeout الـ loop — نكمل
         if (!(loopErr instanceof Error && loopErr.name === "AbortError")) throw loopErr;
       } finally {
         clearTimeout(loopTimer);
       }
 
-      // خروج فوري عند التحقق أو الانتهاء
       if (status.verified || status.expired) break;
-
-      // ليس verified بعد — انتظر ثانية قبل الاستعلام التالي
       await new Promise<void>((resolve) => setTimeout(resolve, 1_000));
     }
 
-    // عند التحقق الناجح: سجّل الرقم الموثوق كمُتحقَّق
     if (status.verified) {
       verifiedPhones.add(trustedPhone);
       setTimeout(() => verifiedPhones.delete(trustedPhone), 10 * 60_000);
       sessionPhoneMap.delete(sessionId);
+      const cur = phoneActiveSession.get(trustedPhone);
+      if (cur?.sessionId === sessionId) phoneActiveSession.delete(trustedPhone);
       logger.info({ phone: trustedPhone }, "✅ تم التحقق بالاتصال بنجاح");
     }
 
     if (status.expired) {
       sessionPhoneMap.delete(sessionId);
+      const cur = phoneActiveSession.get(trustedPhone);
+      if (cur?.sessionId === sessionId) phoneActiveSession.delete(trustedPhone);
     }
 
     res.json(status);

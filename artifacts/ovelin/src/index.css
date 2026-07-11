@@ -216,3 +216,23 @@ input[type="range"].smm-slider::-moz-range-thumb {
   .card-star-4 { animation-delay: 0.3s; }
   .card-star-5 { animation-delay: 1.7s; }
 }
+
+/* ── Glow orb that orbits the registration card ── */
+@keyframes glow-orbit {
+  from { offset-distance: 0%; }
+  to   { offset-distance: 100%; }
+}
+.glow-orb {
+  position: absolute;
+  top: 0; left: 0;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(236,72,153,0.95) 0%, rgba(253,164,175,0.6) 45%, transparent 70%);
+  filter: blur(14px);
+  border-radius: 50%;
+  pointer-events: none;
+  offset-path: inset(0 round 1.5rem);
+  offset-anchor: 50% 50%;
+  offset-distance: 0%;
+  animation: glow-orbit 7s linear infinite;
+}

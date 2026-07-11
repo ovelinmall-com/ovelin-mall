@@ -408,16 +408,13 @@ export default function Register() {
           {/* ─── الخطوة 1: الفورم ─────────────────────────────── */}
           {step === "form" && (
             <motion.div key="form" exit={{ opacity: 0, x: -30 }}>
-            <div className="relative p-[2px] rounded-3xl">
-              <motion.div
-                className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                style={{ background: "conic-gradient(from 0deg, transparent 55%, #ec4899 75%, #fda4af 87%, transparent 100%)" }}
-              />
+            <div className="relative rounded-3xl">
+              <div className="absolute inset-0 rounded-3xl pointer-events-none" style={{ zIndex: 20, overflow: "visible" }}>
+                <div className="glow-orb" />
+              </div>
             <form
               onSubmit={handleFormSubmit}
-              className="relative z-10 fancy-card rounded-3xl p-6 shadow-xl space-y-4"
+              className="relative z-10 fancy-card rounded-3xl p-6 shadow-xl space-y-4 border border-pink-200/50"
             >
               {/* رقم الهاتف */}
               <div>
@@ -599,14 +596,11 @@ export default function Register() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -30 }}
             >
-            <div className="relative p-[2px] rounded-3xl">
-              <motion.div
-                className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                style={{ background: "conic-gradient(from 0deg, transparent 55%, #ec4899 75%, #fda4af 87%, transparent 100%)" }}
-              />
-            <div className="relative z-10 fancy-card rounded-3xl p-6 shadow-xl space-y-5">
+            <div className="relative rounded-3xl">
+              <div className="absolute inset-0 rounded-3xl pointer-events-none" style={{ zIndex: 20, overflow: "visible" }}>
+                <div className="glow-orb" />
+              </div>
+            <div className="relative z-10 fancy-card rounded-3xl p-6 shadow-xl space-y-5 border border-pink-200/50">
 
               {/* أيقونة الاتصال */}
               <div className="text-center pt-2">

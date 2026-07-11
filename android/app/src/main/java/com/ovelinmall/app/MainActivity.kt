@@ -20,6 +20,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val TARGET_URL = "https://ovelinmall-ovelin-mall.hf.space/"
     private val ONESIGNAL_APP_ID = "f2c9dd19-71f0-4af3-8a5b-12f34d99e76a"
+    private val SESSION_TIMEOUT_MS = 5 * 60 * 1000L   // 5 minutes
+    private var pausedAt: Long = 0
 
     private val STABILITY_JS = """
         (function() {
@@ -27,15 +29,14 @@ class MainActivity : AppCompatActivity() {
                 img.setAttribute('loading', 'eager');
             });
             document.querySelectorAll('img[data-src]').forEach(function(img) {
-                if (img.dataset.src) { img.src = img.dataset.src; }
+                if (img.dataset.src) img.src = img.dataset.src;
             });
             document.querySelectorAll('img[data-lazy]').forEach(function(img) {
-                if (img.dataset.lazy) { img.src = img.dataset.lazy; }
+                if (img.dataset.lazy) img.src = img.dataset.lazy;
             });
         })();
     """.trimIndent()
 
-    // Full Median.co (gonative) bridge the website expects
     private val BRIDGE_JS = """
         (function() {
             if (window.gonative && window.gonative._fullyLoaded) return;
@@ -44,25 +45,21 @@ class MainActivity : AppCompatActivity() {
                 isNative: true,
                 platform: 'android',
                 version: '1.0.0',
-
                 onesignal: {
-                    // Called by website to link device to a user account
                     login: function(externalId, callback) {
                         try {
                             OvelinBridge.oneSignalLogin(externalId);
                             if (typeof callback === 'function') callback({ success: true });
                         } catch(e) {
-                            if (typeof callback === 'function') callback({ success: false, error: String(e) });
+                            if (typeof callback === 'function') callback({ success: false });
                         }
                     },
-                    // Called by website to unlink user account
                     logout: function(callback) {
                         try {
                             OvelinBridge.oneSignalLogout();
                             if (typeof callback === 'function') callback({ success: true });
                         } catch(e) {}
                     },
-                    // Called by website to get the OneSignal player/subscription ID
                     getPlayerId: function(callback) {
                         try {
                             var pid = OvelinBridge.getOneSignalPlayerId();
@@ -76,7 +73,6 @@ class MainActivity : AppCompatActivity() {
                         if (typeof callback === 'function') callback({ success: true });
                     }
                 },
-
                 registration: {
                     getRegistrationId: function(callback) {
                         try {
@@ -85,11 +81,9 @@ class MainActivity : AppCompatActivity() {
                         } catch(e) {}
                     }
                 },
-
-                statusbar:  { setStyle: function() {} },
-                sidebar:    { open: function() {}, close: function() {} }
+                statusbar: { setStyle: function() {} },
+                sidebar:   { open: function() {}, close: function() {} }
             };
-
             document.dispatchEvent(new Event('gonative.ready'));
         })();
     """.trimIndent()
@@ -104,10 +98,38 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupSwipeRefresh()
 
-        if (isConnected()) {
+        // Restore WebView state if activity was recreated (e.g. rotation)
+        if (savedInstanceState != null) {
+            binding.webView.restoreState(savedInstanceState)
+        } else if (isConnected()) {
             binding.webView.loadUrl(TARGET_URL)
         } else {
             showNoConnection()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        binding.webView.saveState(outState)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        pausedAt = System.currentTimeMillis()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (pausedAt > 0 && System.currentTimeMillis() - pausedAt > SESSION_TIMEOUT_MS) {
+            // User was away more than 5 minutes → fresh home page load
+            pausedAt = 0
+            if (isConnected()) {
+                binding.webView.loadUrl(TARGET_URL)
+            } else {
+                showNoConnection()
+            }
+        } else {
+            pausedAt = 0  // reset; was away less than 5 min, resume as-is
         }
     }
 
@@ -123,7 +145,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupWebView() {
         binding.webView.apply {
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
-
             addJavascriptInterface(OvelinBridgeInterface(), "OvelinBridge")
 
             settings.apply {
@@ -135,7 +156,8 @@ class MainActivity : AppCompatActivity() {
                 setSupportZoom(false)
                 builtInZoomControls = false
                 displayZoomControls = false
-                cacheMode = WebSettings.LOAD_DEFAULT
+                // Cache-first: use cached content instantly, refresh in background
+                cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
                 mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                 mediaPlaybackRequiresUserGesture = false
                 allowFileAccess = true
@@ -202,26 +224,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Native methods callable from JavaScript */
     inner class OvelinBridgeInterface {
-
         @JavascriptInterface
         fun getOneSignalPlayerId(): String = OneSignal.User.onesignalId ?: ""
 
-        /** Link this device to a user account in OneSignal */
         @JavascriptInterface
         fun oneSignalLogin(externalId: String) {
-            lifecycleScope.launch {
-                OneSignal.login(externalId)
-            }
+            lifecycleScope.launch { OneSignal.login(externalId) }
         }
 
-        /** Unlink user account from this device */
         @JavascriptInterface
         fun oneSignalLogout() {
-            lifecycleScope.launch {
-                OneSignal.logout()
-            }
+            lifecycleScope.launch { OneSignal.logout() }
         }
 
         @JavascriptInterface

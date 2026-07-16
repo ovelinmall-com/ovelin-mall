@@ -74,6 +74,7 @@ import adminReferralWithdrawalsRouter from "./admin/referral-withdrawals";
 import adminTabBadgesRouter from "./admin/tab-badges";
 import receiptsRouter from "./receipts";
 import callVerifyRouter from "./call-verify";
+import freefireAccountsRouter from "./freefire-accounts";
 
 const router: IRouter = Router();
 
@@ -107,6 +108,7 @@ router.use(referralWithdrawRouter);
 router.use(receiptsRouter);
 router.use(securityRouter);
 router.use(callVerifyRouter);
+router.use(freefireAccountsRouter);
 
 router.use(adminLoginRouter);
 router.use(adminCodesRouter);

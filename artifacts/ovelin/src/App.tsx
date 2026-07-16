@@ -76,6 +76,7 @@ const AdminAbTests   = lazy(() => import("@/pages/admin/abtests"));
 const AdminCodes     = lazy(() => import("@/pages/admin/codes"));
 const AdminSmmServices     = lazy(() => import("@/pages/admin/smm-services"));
 const AdminProfits         = lazy(() => import("@/pages/admin/profits"));
+const AdminFreefireAccounts = lazy(() => import("@/pages/admin/freefire-accounts"));
 const Game           = lazy(() => import("@/pages/game"));
 const FreefireHub      = lazy(() => import("@/pages/freefire-hub"));
 const FreefireAccounts = lazy(() => import("@/pages/freefire-accounts"));
@@ -280,6 +281,7 @@ function Router() {
       <Route path="/admin/codes" component={AdminCodes} />
       <Route path="/admin/smm-services" component={AdminSmmServices} />
       <Route path="/admin/profits" component={AdminProfits} />
+      <Route path="/admin/freefire-accounts" component={AdminFreefireAccounts} />
       <Route path="/push-debug" component={PushDebug} />
       <Route component={NotFound} />
     </Switch>

@@ -290,20 +290,99 @@ function AccountDetailModal({ account, onClose }: { account: FFAccount; onClose:
   );
 }
 
+// ─── Demo Accounts ─────────────────────────────────────────────────────────────
+const DEMO_ACCOUNTS: FFAccount[] = [
+  {
+    id: "1",
+    account_name: "حساب ماسي مميز",
+    price: 1200,
+    status: "available",
+    cover_image: "https://placehold.co/400x300/e11d48/white?text=Free+Fire+1",
+    images: [],
+    level: 70,
+    evo_weapons_count: 5,
+    skins_count: 120,
+    characters_count: 18,
+    rank: "Heroic",
+    server: "ME",
+    description: "حساب قديم بمستوى عالٍ مع مجموعة ضخمة من السكنات النادرة",
+    features: ["بدون قفل جهاز", "حساب قديم وموثوق", "سكنات نادرة", "تسليم فوري"],
+  },
+  {
+    id: "2",
+    account_name: "حساب بلاتيني",
+    price: 800,
+    status: "available",
+    cover_image: "https://placehold.co/400x300/7c3aed/white?text=Free+Fire+2",
+    images: [],
+    level: 55,
+    evo_weapons_count: 3,
+    skins_count: 75,
+    characters_count: 12,
+    rank: "Diamond",
+    server: "ME",
+    features: ["بدون قفل جهاز", "سكنات حصرية"],
+  },
+  {
+    id: "3",
+    account_name: "حساب ذهبي",
+    price: 450,
+    status: "available",
+    cover_image: "https://placehold.co/400x300/d97706/white?text=Free+Fire+3",
+    images: [],
+    level: 40,
+    skins_count: 40,
+    characters_count: 8,
+    rank: "Gold",
+    server: "ME",
+    features: ["بدون قفل جهاز", "مناسب للمبتدئين"],
+  },
+  {
+    id: "4",
+    account_name: "حساب برونزي",
+    price: 200,
+    status: "available",
+    cover_image: "https://placehold.co/400x300/92400e/white?text=Free+Fire+4",
+    images: [],
+    level: 25,
+    skins_count: 15,
+    characters_count: 5,
+    server: "ME",
+    features: ["بدون قفل جهاز"],
+  },
+  {
+    id: "5",
+    account_name: "حساب نادر - محجوز",
+    price: 2000,
+    status: "reserved",
+    cover_image: "https://placehold.co/400x300/0f766e/white?text=Reserved",
+    images: [],
+    level: 85,
+    evo_weapons_count: 8,
+    skins_count: 200,
+    characters_count: 22,
+    rank: "Grandmaster",
+    server: "ME",
+    features: ["بدون قفل جهاز", "أقدم نوع حسابات", "سكنات Evo نادرة"],
+  },
+  {
+    id: "6",
+    account_name: "حساب مباع",
+    price: 600,
+    status: "sold",
+    cover_image: "https://placehold.co/400x300/374151/white?text=Sold",
+    images: [],
+    level: 50,
+    skins_count: 60,
+    server: "ME",
+  },
+];
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function FreefireAccounts() {
-  const [accounts, setAccounts] = useState<FFAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [accounts] = useState<FFAccount[]>(DEMO_ACCOUNTS);
+  const [loading] = useState(false);
   const [selected, setSelected] = useState<FFAccount | null>(null);
-
-  useEffect(() => {
-    // جلب الحسابات من API
-    fetch("/api/freefire-accounts")
-      .then((r) => (r.ok ? r.json() : []))
-      .catch(() => [])
-      .then((data) => setAccounts(Array.isArray(data) ? data : []))
-      .finally(() => setLoading(false));
-  }, []);
 
   const handleSupport = () => {
     window.open(`https://wa.me/${SUPPORT_WHATSAPP}`, "_blank");

@@ -892,3 +892,24 @@ export const postCommentLikesTable = pgTable("post_comment_likes", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [uniqueIndex("post_comment_likes_uniq").on(t.commentId, t.userId)]);
 export type PostCommentLike = typeof postCommentLikesTable.$inferSelect;
+
+// ─── Free Fire Accounts ────────────────────────────────────────────────────────
+export const freefireAccountsTable = pgTable("freefire_accounts", {
+  id: serial("id").primaryKey(),
+  accountName: text("account_name").notNull(),
+  price: integer("price").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("available"), // available | reserved | sold
+  coverImage: text("cover_image").notNull().default(""),
+  images: jsonb("images").$type<string[]>().default([]),
+  level: integer("level"),
+  evoWeaponsCount: integer("evo_weapons_count"),
+  skinsCount: integer("skins_count"),
+  charactersCount: integer("characters_count"),
+  rank: text("rank"),
+  server: text("server"),
+  description: text("description"),
+  features: jsonb("features").$type<string[]>().default([]),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+export type FreefireAccount = typeof freefireAccountsTable.$inferSelect;

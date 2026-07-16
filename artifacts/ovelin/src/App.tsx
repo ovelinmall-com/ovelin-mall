@@ -77,6 +77,8 @@ const AdminCodes     = lazy(() => import("@/pages/admin/codes"));
 const AdminSmmServices     = lazy(() => import("@/pages/admin/smm-services"));
 const AdminProfits         = lazy(() => import("@/pages/admin/profits"));
 const Game           = lazy(() => import("@/pages/game"));
+const FreefireHub      = lazy(() => import("@/pages/freefire-hub"));
+const FreefireAccounts = lazy(() => import("@/pages/freefire-accounts"));
 const PubgTopup      = lazy(() => import("@/pages/pubg-topup"));
 const PubgCodes      = lazy(() => import("@/pages/pubg-codes"));
 const MyCodes        = lazy(() => import("@/pages/my-codes"));
@@ -243,6 +245,8 @@ function Router() {
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/account" component={Account} />
       <Route path="/my-codes" component={MyCodes} />
+      <Route path="/freefire" component={FreefireHub} />
+      <Route path="/freefire-accounts" component={FreefireAccounts} />
       <Route path="/game/:slug" component={Game} />
       <Route path="/pubg-topup" component={PubgTopup} />
       <Route path="/pubg-codes" component={PubgCodes} />

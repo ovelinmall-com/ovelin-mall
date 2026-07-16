@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "2FoNSQ8_EQW8FCOG3zJnx"
+uri = "file://ovelin-mall-source.zip"
+type = "unspecified"
+title = "ovelin-mall-source.zip"

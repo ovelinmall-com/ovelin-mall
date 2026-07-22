@@ -1730,6 +1730,8 @@ function ProductsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
   const [seedResult, setSeedResult] = useState<string | null>(null);
   const [seedingFF, setSeedingFF] = useState(false);
   const [seedFFResult, setSeedFFResult] = useState<string | null>(null);
+  const [seedingPubg, setSeedingPubg] = useState(false);
+  const [seedPubgResult, setSeedPubgResult] = useState<string | null>(null);
   const [smmStatus, setSmmStatus] = useState<{ ok: boolean; totalServices?: number; breakdown?: any; error?: string } | null>(null);
   const [checkingSmm, setCheckingSmm] = useState(false);
 
@@ -1749,6 +1751,24 @@ function ProductsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
       setSeedResult(`❌ ${e.message}`);
     } finally {
       setSeeding(false);
+    }
+  }
+
+  async function handleSeedPubg() {
+    setSeedingPubg(true);
+    setSeedPubgResult(null);
+    try {
+      const res = await fetch("/api/admin/smm/seed-pubg", { method: "POST", credentials: "include" });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setSeedPubgResult(d.message ?? "✅ تم");
+      } else {
+        setSeedPubgResult(`❌ ${d.error ?? "فشل"}`);
+      }
+    } catch (e: any) {
+      setSeedPubgResult(`❌ ${e.message}`);
+    } finally {
+      setSeedingPubg(false);
     }
   }
 
@@ -1852,6 +1872,30 @@ function ProductsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
           بعد الإنشاء اذهب لـ 🔑 <strong>إدارة الأكواد</strong> لإضافة أكواد التفعيل لكل منتج.
         </p>
       </div>
+
+      {/* ── PUBG Mobile UC ─────────────────────────── */}
+      <div className="rounded-2xl bg-blue-50 border border-blue-200 p-3 space-y-2">
+        <div className="text-xs font-bold text-blue-800 flex items-center gap-1.5">
+          🎮 PUBG Mobile — باقات UC
+        </div>
+        <p className="text-[10px] text-blue-700">
+          أنشئ الباقات الـ 6 (60 / 325 / 660 / 1800 / 3850 / 8100 UC) في المتجر بسعر افتراضي. بعدها عدّل الأسعار من قائمة المنتجات حسب أسعارك.
+        </p>
+        <button
+          onClick={handleSeedPubg}
+          disabled={seedingPubg}
+          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+        >
+          {seedingPubg ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />جاري الإنشاء...</> : "🎮 إنشاء باقات PUBG Mobile UC (6 باقات)"}
+        </button>
+        {seedPubgResult && (
+          <div className="text-[10px] font-bold text-blue-900 bg-blue-100 rounded-lg px-2 py-1">{seedPubgResult}</div>
+        )}
+        <p className="text-[9px] text-blue-600 border-t border-blue-200 pt-1">
+          بعد الإنشاء عدّل أسعار الباقات من <strong>قائمة المنتجات</strong> حسب أسعارك الفعلية.
+        </p>
+      </div>
+
       {/* ── Category filter ── */}
       <div className="overflow-x-auto no-scrollbar -mx-0">
         <div className="flex gap-1.5 w-max text-[10px] font-bold pb-1">

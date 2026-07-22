@@ -654,6 +654,44 @@ router.post("/admin/smm/seed-freefire", requireAdmin, async (_req, res) => {
   }
 });
 
+// ── Admin: seed PUBG Mobile UC products ───────────────────────────────────────
+router.post("/admin/smm/seed-pubg", requireAdmin, async (_req, res) => {
+  try {
+    const PUBG_UC_PRODUCTS = [
+      { name: "ببجي 60 UC",   description: "60 شدة UC لـ PUBG Mobile • شحن مباشر على الحساب",   quantity: "60 UC",   price: "20.00",  sortOrder: 120 },
+      { name: "ببجي 325 UC",  description: "325 شدة UC لـ PUBG Mobile • شحن مباشر على الحساب",  quantity: "325 UC",  price: "95.00",  sortOrder: 119 },
+      { name: "ببجي 660 UC",  description: "660 شدة UC لـ PUBG Mobile • شحن مباشر على الحساب",  quantity: "660 UC",  price: "185.00", sortOrder: 118 },
+      { name: "ببجي 1800 UC", description: "1800 شدة UC لـ PUBG Mobile • شحن مباشر على الحساب", quantity: "1800 UC", price: "480.00", sortOrder: 117 },
+      { name: "ببجي 3850 UC", description: "3850 شدة UC لـ PUBG Mobile • شحن مباشر على الحساب", quantity: "3850 UC", price: "950.00", sortOrder: 116 },
+      { name: "ببجي 8100 UC", description: "8100 شدة UC لـ PUBG Mobile • شحن مباشر على الحساب", quantity: "8100 UC", price: "1900.00", sortOrder: 115 },
+    ];
+
+    const { db, productsTable } = await import("@workspace/db");
+    const { eq } = await import("drizzle-orm");
+    let created = 0;
+    let updated = 0;
+
+    for (const p of PUBG_UC_PRODUCTS) {
+      const existing = await db
+        .select({ id: productsTable.id })
+        .from(productsTable)
+        .where(eq(productsTable.name, p.name))
+        .limit(1);
+      if (existing[0]) {
+        await db.update(productsTable).set({ ...p, platform: "PUBG Mobile", category: "gift_cards", badge: "شحن يدوي", active: true, deliveryTime: "خلال 30 دقيقة" }).where(eq(productsTable.id, existing[0].id));
+        updated++;
+      } else {
+        await db.insert(productsTable).values({ ...p, platform: "PUBG Mobile", category: "gift_cards", badge: "شحن يدوي", active: true, deliveryTime: "خلال 30 دقيقة" });
+        created++;
+      }
+    }
+
+    res.json({ ok: true, created, updated, message: `✅ PUBG Mobile — أُنشئ: ${created} • حُدّث: ${updated}` });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message ?? "فشل" });
+  }
+});
+
 router.get("/smm/order-status/:smmOrderId", requireUser, async (req, res) => {
   try {
     const smmOrderId = req.params.smmOrderId as string;

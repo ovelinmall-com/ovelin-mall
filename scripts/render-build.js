@@ -1,23 +1,19 @@
 #!/usr/bin/env node
-/**
- * Render Build Script
- * Installs pnpm to /tmp (always writable) to avoid permission issues,
- * then builds the API server from a minimal workspace config.
- */
-const { execSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
+// ES module syntax — required because scripts/package.json has "type": "module"
+import { execSync } from "child_process";
+import { writeFileSync, existsSync, unlinkSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 
 console.log("=== Render Build ===");
 console.log("Node:", process.version);
 console.log("npm:", execSync("npm --version").toString().trim());
 
 // 1. Install pnpm to /tmp (always writable, no sudo needed)
-const pnpmDir = path.join(os.tmpdir(), "pnpm-install");
+const pnpmDir = join(tmpdir(), "pnpm-install");
 console.log("\nInstalling pnpm@9 to", pnpmDir, "...");
 execSync(`npm install --prefix "${pnpmDir}" pnpm@9`, { stdio: "inherit" });
-const pnpm = path.join(pnpmDir, "node_modules", ".bin", "pnpm");
+const pnpm = join(pnpmDir, "node_modules", ".bin", "pnpm");
 console.log("pnpm version:", execSync(`"${pnpm}" --version`).toString().trim());
 
 // 2. Write a minimal pnpm-workspace.yaml (avoids installing Replit-specific frontend packages)
@@ -27,10 +23,10 @@ const minimalWorkspace = `packages:
   - lib/api-zod
 
 catalog:
-  drizzle-orm: '^0.45.2'
-  zod: '^3.25.76'
-  '@types/node': '^25.3.3'
-  tsx: '^4.21.0'
+  drizzle-orm: "^0.45.2"
+  zod: "^3.25.76"
+  "@types/node": "^25.3.3"
+  tsx: "^4.21.0"
 
 autoInstallPeers: false
 
@@ -38,14 +34,19 @@ onlyBuiltDependencies:
   - esbuild
 
 overrides:
-  esbuild: '0.27.3'
+  esbuild: "0.27.3"
+  "esbuild>@esbuild/darwin-arm64": "-"
+  "esbuild>@esbuild/darwin-x64": "-"
+  "esbuild>@esbuild/win32-arm64": "-"
+  "esbuild>@esbuild/win32-ia32": "-"
+  "esbuild>@esbuild/win32-x64": "-"
 `;
 console.log("\nWriting minimal pnpm-workspace.yaml...");
-fs.writeFileSync("pnpm-workspace.yaml", minimalWorkspace);
+writeFileSync("pnpm-workspace.yaml", minimalWorkspace);
 
 // 3. Remove stale lockfile so pnpm resolves fresh
-if (fs.existsSync("pnpm-lock.yaml")) {
-  fs.unlinkSync("pnpm-lock.yaml");
+if (existsSync("pnpm-lock.yaml")) {
+  unlinkSync("pnpm-lock.yaml");
   console.log("Removed stale pnpm-lock.yaml");
 }
 
@@ -58,3 +59,4 @@ console.log("\nBuilding @workspace/api-server...");
 execSync(`"${pnpm}" --filter @workspace/api-server run build`, { stdio: "inherit" });
 
 console.log("\n=== Build complete! ===");
+

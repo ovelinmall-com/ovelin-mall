@@ -781,7 +781,7 @@ const GRAD_SOCIAL = "from-white via-pink-100 to-fuchsia-50";
 const GRAD_SUBS = "from-pink-400 via-pink-500 to-rose-600";
 
 const GAMES_FEATURED: ServiceItem[] = [
-  { bgImage: `${import.meta.env.BASE_URL}games/pubg.jpg`,           name: "PUBG Mobile",    hint: "شدات UC",          gradient: GRAD_GAMES, slug: "pubg" },
+  { bgImage: `${import.meta.env.BASE_URL}games/pubg.jpg`,           name: "PUBG Mobile",    hint: "شدات UC",          gradient: GRAD_GAMES, slug: "pubg", customHref: "/pubg-topup" },
   { bgImage: `${import.meta.env.BASE_URL}games/free-fire.webp`,     name: "Free Fire",      hint: "جواهر",            gradient: GRAD_GAMES, slug: "free-fire", customHref: "/freefire" },
   { bgImage: `${import.meta.env.BASE_URL}games/cod.webp`,           name: "Call of Duty",   hint: "CP Points",        gradient: GRAD_GAMES, slug: "cod" },
   { bgImage: `${import.meta.env.BASE_URL}games/clash-of-clans.jpg`, name: "Clash of Clans", hint: "جواهر",            gradient: GRAD_GAMES, slug: "clash-of-clans" },

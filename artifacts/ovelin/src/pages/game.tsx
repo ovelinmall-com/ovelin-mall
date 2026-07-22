@@ -186,6 +186,7 @@ const FF_FEATURES = [
 ];
 
 const FF_DIAMONDS = [110, 210, 530, 1080, 2200];
+const PUBG_UC_AMOUNTS = [60, 325, 660, 1800, 3850, 8100];
 
 export default function Game() {
   const params = useParams<{ slug: string }>();
@@ -334,6 +335,13 @@ export default function Game() {
   const [ffCodeBuyDone, setFfCodeBuyDone] = useState<string | null>(null);
   const [ffCodeBuyError, setFfCodeBuyError] = useState<string | null>(null);
 
+  // ===== PUBG special states =====
+  const [pubgSelected, setPubgSelected] = useState<Product | null>(null);
+  const [pubgPlayerId, setPubgPlayerId] = useState("");
+  const [pubgCheckoutOpen, setPubgCheckoutOpen] = useState(false);
+  const [pubgBuyError, setPubgBuyError] = useState<string | null>(null);
+  const [pubgOrderDone, setPubgOrderDone] = useState(false);
+
   // Group products by badge for SMM
   const smmGroups = useMemo<Record<SmmTab, Product[]>>(() => ({
     followers: products.filter((p) => p.badge === "followers"),
@@ -449,6 +457,35 @@ export default function Game() {
     },
   });
 
+  // ===== PUBG BUY mutation =====
+  const pubgBuyMutation = useMutation({
+    mutationFn: async ({ productId, playerId }: { productId: number; playerId: string }) => {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, targetInfo: playerId.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "فشل الطلب");
+      return data;
+    },
+    onSuccess: () => {
+      setPubgOrderDone(true);
+      setPubgBuyError(null);
+      qc.invalidateQueries({ queryKey: getGetMyDashboardQueryKey() });
+      setTimeout(() => {
+        setPubgCheckoutOpen(false);
+        setPubgSelected(null);
+        setPubgPlayerId("");
+        setPubgOrderDone(false);
+      }, 2000);
+    },
+    onError: (err: any) => {
+      setPubgBuyError(err.message ?? "فشل الطلب، حاول مرة أخرى");
+    },
+  });
+
   // ===== SMM BUY mutation =====
   const smmBuyMutation = useMutation({
     mutationFn: ({
@@ -558,8 +595,8 @@ export default function Game() {
 
   return (
     <AppLayout>
-      {/* ===== HERO HEADER (hidden for Free Fire — FF has its own hero) ===== */}
-      {!isFreeFire && <div className={`relative overflow-hidden ${isSocial ? "text-rose-800 bg-white" : "text-white"} ${
+      {/* ===== HERO HEADER (hidden for Free Fire & PUBG — they have their own hero) ===== */}
+      {!isFreeFire && !isPubg && <div className={`relative overflow-hidden ${isSocial ? "text-rose-800 bg-white" : "text-white"} ${
         isPubg
           ? "bg-gradient-to-b from-zinc-900 via-pink-950 to-slate-900"
           : isSocial
@@ -988,119 +1025,366 @@ export default function Game() {
 
       {/* ===== GAME CARDS: PACKAGES LIST ===== */}
       {!isSocial && !isSubscription && (
-        <div className={`${isFreeFire ? "min-h-screen" : "px-4 py-5 min-h-[60vh]"} ${isPubg ? "bg-gradient-to-b from-slate-900 via-zinc-900 to-rose-950 relative overflow-hidden" : ""}`}>
+        <div className={`${isFreeFire || isPubg ? "min-h-screen" : "px-4 py-5 min-h-[60vh]"}`}>
           {isPubg ? (
-            <div className="space-y-4 pt-1">
-
-              {/* Section label */}
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-pink-400 to-fuchsia-500" />
-                <span className="font-black text-pink-200 text-[14px]">اختر طريقة الشحن</span>
-              </div>
-
-              {/* ── Card 1: شحن عبر الـ ID ── */}
-              <Link href="/pubg-topup">
-                <motion.div
-                  whileTap={{ scale: 0.97 }}
-                  className="relative w-full rounded-3xl overflow-hidden border border-pink-500/60 shadow-[0_8px_32px_rgba(236,72,153,0.35)] cursor-pointer"
-                >
-                  {/* Gold ribbon */}
-                  <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 py-1.5 px-4 flex items-center justify-between">
-                    <span className="text-[10px] font-black text-yellow-900 flex items-center gap-1"><Crown className="w-3 h-3" /> الأكثر طلباً</span>
-                    <span className="text-[10px] font-black text-yellow-900">Midasbuy رسمي</span>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-zinc-900 via-pink-950 to-slate-900 text-white p-5 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(236,72,153,0.18),transparent_60%)] pointer-events-none" />
-                    <div className="relative flex items-center gap-4">
-                      <div className="shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-600 to-fuchsia-700 border border-pink-400/60 flex items-center justify-center shadow-[0_4px_20px_rgba(236,72,153,0.5)]">
-                        <Zap className="w-7 h-7 text-white" />
-                      </div>
-                      <div className="flex-1 text-right">
-                        <div className="text-[10px] text-pink-300 font-black tracking-widest uppercase mb-0.5">شحن مباشر — بدون كود</div>
-                        <div className="text-[20px] font-black leading-tight" style={{ color: "#FFD700" }}>شحن عبر الـ ID</div>
-                        <div className="text-[11px] text-pink-200/70 mt-1">UC شدات • Royale Pass • Prime</div>
-                      </div>
-                      <ChevronLeft className="w-5 h-5 text-pink-400 shrink-0" />
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-pink-700/80 to-fuchsia-800/80 px-4 py-2.5 flex items-center justify-between border-t border-pink-500/30">
-                    <span className="text-[10px] text-pink-200 font-bold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> ضمان 100% • 30 دقيقة</span>
-                    <span className="text-[11px] text-white font-black bg-pink-500/30 px-3 py-1 rounded-full border border-pink-400/40">اشحن الآن</span>
-                  </div>
-                </motion.div>
-              </Link>
-
-              {/* ── رابط شحن مباشر عبر shop2game ── */}
-              <a
-                href="https://shop2game.com/app"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
+            <div dir="rtl" className="-mx-0 -my-0">
+              {/* ── Hero ── */}
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative w-full overflow-hidden"
+                style={{ height: "300px" }}
               >
+                <style>{`
+                  @keyframes pubg-spark {
+                    0%   { opacity: 0;   transform: translate(0, 0) scale(1); }
+                    18%  { opacity: 1; }
+                    70%  { opacity: 0.5; transform: translate(var(--dx, 6px), -70px) scale(0.55); }
+                    100% { opacity: 0;   transform: translate(var(--dx, 10px), -120px) scale(0.15); }
+                  }
+                  @keyframes pubg-spark2 {
+                    0%, 100% { opacity: 0;   transform: translate(0,0) scale(0.4); }
+                    25%      { opacity: 0.9; transform: translate(var(--dx,-5px), -40px) scale(1); }
+                    75%      { opacity: 0.2; transform: translate(var(--dx, 8px), -90px) scale(0.35); }
+                  }
+                  .pubg-sp  { animation: pubg-spark  var(--d,4s)   var(--delay,0s) ease-out    infinite; }
+                  .pubg-sp2 { animation: pubg-spark2 var(--d,5.5s) var(--delay,0s) ease-in-out infinite; }
+                `}</style>
+                <img
+                  src="/games/pubg.jpg"
+                  alt="PUBG Mobile"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ objectPosition: "center top" }}
+                />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, rgba(190,24,93,0.82) 0%, rgba(225,29,72,0.75) 40%, rgba(100,0,30,0.88) 100%)" }} />
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 32px)",
+                }} />
+                {[
+                  { left: "6%",  bottom: "8%",  delay: "0s",   dur: "4.2s", dx: "5px",  size: 3, cls: "pubg-sp"  },
+                  { left: "15%", bottom: "20%", delay: "1.1s", dur: "5.0s", dx: "-7px", size: 2, cls: "pubg-sp2" },
+                  { left: "26%", bottom: "5%",  delay: "0.5s", dur: "3.8s", dx: "9px",  size: 4, cls: "pubg-sp"  },
+                  { left: "38%", bottom: "30%", delay: "2.0s", dur: "5.5s", dx: "-4px", size: 2, cls: "pubg-sp2" },
+                  { left: "50%", bottom: "12%", delay: "0.3s", dur: "4.6s", dx: "6px",  size: 3, cls: "pubg-sp"  },
+                  { left: "62%", bottom: "40%", delay: "1.5s", dur: "5.2s", dx: "-8px", size: 2, cls: "pubg-sp2" },
+                  { left: "73%", bottom: "7%",  delay: "0.8s", dur: "4.0s", dx: "5px",  size: 4, cls: "pubg-sp"  },
+                  { left: "84%", bottom: "25%", delay: "2.3s", dur: "5.8s", dx: "-6px", size: 2, cls: "pubg-sp2" },
+                  { left: "91%", bottom: "10%", delay: "0.6s", dur: "4.4s", dx: "7px",  size: 3, cls: "pubg-sp"  },
+                  { left: "20%", bottom: "55%", delay: "1.8s", dur: "6.0s", dx: "-5px", size: 2, cls: "pubg-sp2" },
+                  { left: "44%", bottom: "60%", delay: "0.9s", dur: "5.4s", dx: "4px",  size: 2, cls: "pubg-sp"  },
+                  { left: "68%", bottom: "50%", delay: "2.6s", dur: "4.8s", dx: "-9px", size: 3, cls: "pubg-sp2" },
+                ].map((s, i) => (
+                  <div key={i} className={s.cls} style={{
+                    position: "absolute", bottom: s.bottom, left: s.left,
+                    width: s.size, height: s.size, borderRadius: "50%",
+                    background: "radial-gradient(circle, #fff 0%, #f97316 60%, transparent 100%)",
+                    "--delay": s.delay, "--d": s.dur, "--dx": s.dx,
+                  } as React.CSSProperties} />
+                ))}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-center px-8 py-4 rounded-2xl mx-8" style={{
+                    background: "rgba(255,255,255,0.10)",
+                    backdropFilter: "blur(14px)",
+                    border: "1px solid rgba(255,255,255,0.22)",
+                    boxShadow: "0 8px 40px rgba(0,0,0,0.3)",
+                  }}>
+                    <p className="text-white font-black text-4xl leading-none tracking-widest"
+                      style={{ textShadow: "0 0 24px rgba(255,120,0,0.7), 0 2px 10px rgba(0,0,0,0.6)" }}>
+                      PUBG MOBILE
+                    </p>
+                    <div className="mt-2 h-px mx-2" style={{ background: "linear-gradient(90deg, transparent, rgba(255,165,0,0.8), transparent)" }} />
+                    <p className="text-white/85 text-sm mt-2 font-semibold tracking-wide">اشحن UC الآن</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <div className="bg-white px-4 pt-5 pb-10">
+                {/* Features strip */}
+                <div className="flex gap-2.5 mb-5 overflow-x-auto pb-1 no-scrollbar">
+                  {FF_FEATURES.map((f, i) => (
+                    <div key={i} className="flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 relative" style={{
+                      padding: "7px 16px", borderRadius: "999px",
+                      background: "linear-gradient(135deg, rgba(220,38,38,0.08) 0%, rgba(190,24,93,0.06) 100%)",
+                      border: "1.5px solid rgba(220,38,38,0.35)",
+                      boxShadow: "0 2px 10px rgba(220,38,38,0.10), inset 0 1px 0 rgba(255,255,255,0.8)",
+                    }}>
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-red-300 text-[8px] font-black leading-none select-none">⌒</span>
+                      <f.icon className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                      <span className="text-gray-800 text-xs font-bold">{f.label}</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-red-300 text-[8px] font-black leading-none select-none">⌒</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Section title */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-gradient-to-l from-red-300 to-transparent" />
+                  <span className="text-gray-800 font-bold text-sm px-2">اختر باقتك</span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-pink-300 to-transparent" />
+                </div>
+
+                {/* UC Grid */}
+                {isLoading ? (
+                  <div className="grid grid-cols-5 gap-2">
+                    {PUBG_UC_AMOUNTS.map((uc) => (
+                      <div key={uc} className="rounded-2xl aspect-square animate-pulse bg-red-50" />
+                    ))}
+                  </div>
+                ) : (() => {
+                  const pubgPackages = PUBG_UC_AMOUNTS.map((uc) => {
+                    const product = products.find((p) =>
+                      parseInt((p.quantity ?? p.name).replace(/[^\d]/g, "")) === uc
+                    );
+                    return { uc, product: product ?? null };
+                  });
+                  return (
+                    <div className="grid grid-cols-5 gap-2">
+                      {pubgPackages.map(({ uc, product }) => {
+                        const price = product ? Number(product.price) : 0;
+                        const fakePrice = price > 0 ? price + 100 : 0;
+                        const isSelected = !!product && pubgSelected?.id === product.id;
+                        const canClick = !!product;
+                        return (
+                          <motion.button
+                            key={uc}
+                            whileTap={canClick ? { scale: 0.92 } : {}}
+                            onClick={() => {
+                              if (!canClick) return;
+                              if (!me) { setLocation("/login"); return; }
+                              setPubgSelected((prev) => prev?.id === product!.id ? null : product!);
+                            }}
+                            style={isSelected ? {
+                              border: "2px solid #db2777",
+                              background: "#fef2f2",
+                              boxShadow: "0 0 16px 4px rgba(220,38,38,0.45), 0 4px 12px rgba(220,38,38,0.3)",
+                            } : product ? {
+                              border: "2px solid #db2777",
+                              background: "white",
+                              cursor: "pointer",
+                            } : {
+                              border: "2px solid #db2777",
+                              background: "#fef2f2",
+                              opacity: 0.25,
+                              cursor: "not-allowed",
+                            }}
+                            className="flex flex-col items-center justify-center rounded-2xl py-3 px-1 transition-all relative"
+                          >
+                            <span className="text-base leading-none mb-1" style={{
+                              filter: "hue-rotate(150deg) saturate(3) brightness(0.95) drop-shadow(0 0 5px rgba(220,38,38,0.9))",
+                            }}>💎</span>
+                            <span className={`font-black text-xs leading-none ${isSelected ? "text-red-600" : "text-gray-800"}`}>
+                              {uc >= 1000 ? (uc / 1000).toFixed(uc % 1000 === 0 ? 0 : 1) + "K" : uc}
+                            </span>
+                            <span className={`text-[9px] font-bold leading-none mt-0.5 ${isSelected ? "text-red-400" : "text-gray-400"}`}>UC</span>
+                            {price > 0 && (
+                              <div className="flex flex-col items-center mt-1 gap-0">
+                                <span className="text-[8px] text-gray-400 font-semibold leading-none line-through">
+                                  {fakePrice.toLocaleString("en-US")}
+                                </span>
+                                <span className="text-[9px] text-red-500 font-bold leading-none">
+                                  {price.toLocaleString("en-US")}
+                                </span>
+                              </div>
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                {/* UC info row */}
+                <AnimatePresence>
+                  {pubgSelected && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden mt-4"
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-red-200 bg-white">
+                        <span className="font-bold text-gray-800 text-sm">
+                          💎 {parseInt((pubgSelected.quantity ?? pubgSelected.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} UC
+                        </span>
+                        <span className="font-black text-red-600 text-lg">
+                          {formatSDG(Number(pubgSelected.price))} ج.س
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* كيف تشحن؟ */}
                 <motion.div
-                  whileTap={{ scale: 0.97 }}
-                  className="relative w-full rounded-2xl overflow-hidden border border-amber-500/50 shadow-[0_4px_16px_rgba(245,158,11,0.2)] cursor-pointer"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="mt-4 rounded-2xl overflow-hidden bg-white border border-red-100"
+                  style={{ boxShadow: "0 2px 16px rgba(220,38,38,0.08)" }}
                 >
-                  <div className="bg-gradient-to-r from-amber-900/80 via-yellow-900/80 to-amber-900/80 px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 border border-amber-400/60 flex items-center justify-center shadow">
-                        <ExternalLink className="w-4 h-4 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-amber-300 font-black tracking-widest uppercase leading-tight">طلب شحن مباشر</div>
-                        <div className="text-sm font-black text-white leading-tight">shop2game.com</div>
-                      </div>
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-red-100"
+                    style={{ background: "linear-gradient(90deg, #fef2f2, #fff5f5)" }}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: "linear-gradient(135deg, #db2777, #e11d48)" }}>
+                      <span className="text-white text-[10px] font-black">؟</span>
                     </div>
-                    <div className="shrink-0 flex items-center gap-1 bg-amber-500/20 border border-amber-400/40 px-3 py-1 rounded-full">
-                      <span className="text-[11px] text-amber-200 font-black">اضغط هنا</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-amber-300" />
-                    </div>
+                    <h4 className="text-gray-800 font-bold text-sm">كيف تشحن؟</h4>
                   </div>
+                  {[
+                    "اختر الباقة المناسبة",
+                    "أدخل ID حسابك في PUBG Mobile",
+                    "أكّد الطلب من محفظتك",
+                    "ستصلك الـ UC خلال دقائق ✅",
+                  ].map((step, i) => (
+                    <div key={i}>
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-white font-black text-[11px]"
+                          style={{ background: "linear-gradient(135deg, #db2777, #e11d48)" }}>
+                          {i + 1}
+                        </div>
+                        <span className="text-gray-600 text-xs leading-relaxed flex-1">{step}</span>
+                      </div>
+                      {i < 3 && <div className="h-px mx-4" style={{ background: "linear-gradient(90deg, transparent, rgba(220,38,38,0.12), transparent)" }} />}
+                    </div>
+                  ))}
                 </motion.div>
-              </a>
 
-              {/* ── Card 2: أكواد جاهزة ── */}
-              <Link href="/pubg-codes">
-                <motion.div
-                  whileTap={{ scale: 0.97 }}
-                  className="relative w-full rounded-3xl overflow-hidden border border-pink-500/40 shadow-[0_8px_24px_rgba(168,85,247,0.25)] cursor-pointer"
-                >
-                  <div className="bg-gradient-to-r from-fuchsia-700/60 to-pink-700/60 py-1.5 px-4 flex items-center justify-between border-b border-pink-500/30">
-                    <span className="text-[10px] font-black text-pink-200 flex items-center gap-1"><Zap className="w-3 h-3 text-yellow-400" /> تسليم فوري</span>
-                    <span className="text-[10px] font-black text-pink-200">بدون معرف اللاعب</span>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-slate-900 via-zinc-900 to-pink-950 text-white p-5 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(168,85,247,0.15),transparent_60%)] pointer-events-none" />
-                    <div className="relative flex items-center gap-4">
-                      <div className="shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-fuchsia-600 to-purple-700 border border-fuchsia-400/60 flex items-center justify-center shadow-[0_4px_20px_rgba(168,85,247,0.45)]">
-                        <KeyRound className="w-7 h-7 text-white" />
+                {/* Wallet + Order Summary */}
+                <div className="mt-8 rounded-2xl overflow-hidden border border-red-200"
+                  style={{ boxShadow: "0 4px 24px rgba(220,38,38,0.15)" }}>
+                  <div className="px-5 py-4 flex items-center justify-between relative overflow-hidden"
+                    style={{ background: "linear-gradient(135deg, #be185d, #db2777, #e11d48, #9f1239)" }}>
+                    <div className="absolute inset-0 pointer-events-none" style={{
+                      backgroundImage: "repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 24px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 24px)",
+                    }} />
+                    <div className="absolute -top-8 -left-8 w-32 h-32 rounded-full pointer-events-none"
+                      style={{ background: "radial-gradient(circle, rgba(251,191,36,0.15) 0%, transparent 70%)" }} />
+                    <div className="text-right relative">
+                      <div className="text-white/70 text-[10px] font-semibold mb-1 tracking-wide uppercase">الإجمالي</div>
+                      <div className="text-white font-black text-2xl leading-none tabular-nums"
+                        style={{ textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
+                        {pubgSelected ? formatSDG(Number(pubgSelected.price)) : "0.00"}
+                        <span className="text-sm font-bold mr-1">ج.س</span>
                       </div>
-                      <div className="flex-1 text-right">
-                        <div className="text-[10px] text-fuchsia-300 font-black tracking-widest uppercase mb-0.5">كود جاهز — استرداد فوري</div>
-                        <div className="text-[20px] font-black leading-tight text-white">أكواد ببجي جاهزة</div>
-                        <div className="text-[11px] text-pink-200/70 mt-1">UC Codes • Royale Pass • Gift</div>
+                    </div>
+                    <div className="w-px h-10 mx-2 opacity-30" style={{ background: "rgba(255,255,255,0.5)" }} />
+                    <div className="text-left relative">
+                      <div className="text-white/70 text-[10px] font-semibold mb-1 tracking-wide uppercase">رصيد محفظتك</div>
+                      <div className="flex items-center gap-1.5">
+                        <Wallet className="w-4 h-4 text-white/90 flex-shrink-0" />
+                        <span className="text-white font-black text-base tabular-nums"
+                          style={{ textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
+                          {formatSDG(balance)} <span className="text-sm font-bold">ج.س</span>
+                        </span>
                       </div>
-                      <ChevronLeft className="w-5 h-5 text-fuchsia-400 shrink-0" />
                     </div>
                   </div>
-
-                  <div className="bg-gradient-to-r from-zinc-800/80 to-pink-950/80 px-4 py-2.5 flex items-center justify-between border-t border-pink-500/20">
-                    <span className="text-[10px] text-pink-300 font-bold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> كود أصلي 100%</span>
-                    <span className="text-[11px] text-white font-black bg-fuchsia-500/30 px-3 py-1 rounded-full border border-fuchsia-400/40">اشتري الآن</span>
+                  <div className="flex gap-2 px-4 py-3 bg-white">
+                    <button
+                      onClick={() => { if (!pubgSelected) return; setPubgBuyError(null); setPubgOrderDone(false); setPubgCheckoutOpen(true); }}
+                      disabled={!pubgSelected}
+                      className="flex-1 py-3.5 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2 transition-all relative overflow-hidden"
+                      style={{
+                        background: pubgSelected
+                          ? "linear-gradient(135deg, #db2777, #e11d48, #be185d)"
+                          : "linear-gradient(135deg, #f9a8c9, #fca5a5)",
+                        boxShadow: pubgSelected ? "0 4px 20px rgba(220,38,38,0.4)" : "none",
+                      }}
+                    >
+                      {pubgSelected && (
+                        <span className="absolute inset-0 rounded-xl animate-pulse pointer-events-none" style={{ background: "rgba(255,255,255,0.08)" }} />
+                      )}
+                      <Send className="w-4 h-4 relative" />
+                      <span className="relative">اشحن الآن</span>
+                    </button>
+                    <button
+                      onClick={() => setPubgSelected(null)}
+                      disabled={!pubgSelected}
+                      className="px-5 py-3.5 rounded-xl font-bold text-sm border-2 disabled:opacity-30 transition-all"
+                      style={{ borderColor: "#db2777", color: "#db2777", background: "white" }}
+                    >
+                      إلغاء
+                    </button>
                   </div>
-                </motion.div>
-              </Link>
+                </div>
 
-              {/* Trust bar */}
-              <div className="rounded-2xl border border-pink-700/40 bg-white/5 py-3 px-4 flex items-center justify-around">
-                <span className="flex items-center gap-1.5 text-[11px] text-pink-300 font-black"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> شحن آمن</span>
-                <span className="flex items-center gap-1.5 text-[11px] text-pink-300 font-black"><Crown className="w-3.5 h-3.5 text-yellow-400" /> +10K عميل</span>
-                <span className="flex items-center gap-1.5 text-[11px] text-pink-300 font-black"><Sparkles className="w-3.5 h-3.5 text-fuchsia-400" /> دعم 24/7</span>
+                <p className="text-gray-400 text-xs text-center mt-4">
+                  للدعم تواصل معنا عبر خدمة العملاء في التطبيق
+                </p>
               </div>
 
+              {/* Checkout Dialog */}
+              <Dialog
+                open={pubgCheckoutOpen}
+                onOpenChange={(o) => { if (!pubgBuyMutation.isPending) setPubgCheckoutOpen(o); }}
+              >
+                <DialogContent dir="rtl" className="max-w-sm rounded-3xl p-6">
+                  <DialogHeader>
+                    <DialogTitle className="text-right font-black text-gray-800 mb-1">
+                      💎 أدخل ID حسابك في PUBG
+                    </DialogTitle>
+                  </DialogHeader>
+                  {pubgSelected && (
+                    <div>
+                      <div className="bg-red-50 rounded-2xl p-3 mb-4 flex items-center justify-between">
+                        <span className="font-bold text-gray-700 text-sm">
+                          {parseInt((pubgSelected.quantity ?? pubgSelected.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} UC
+                        </span>
+                        <span className="font-black text-red-600">
+                          {Number(pubgSelected.price).toFixed(0)} ج.س
+                        </span>
+                      </div>
+                      {pubgOrderDone ? (
+                        <div className="text-center py-4">
+                          <div className="text-4xl mb-3">✅</div>
+                          <p className="font-black text-green-700 text-base">تم الطلب بنجاح!</p>
+                          <p className="text-gray-500 text-xs mt-1">ستصلك الـ UC خلال دقائق</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-xs font-bold text-gray-700 mb-1 block">Player ID</label>
+                              <input
+                                type="text"
+                                value={pubgPlayerId}
+                                onChange={(e) => setPubgPlayerId(e.target.value)}
+                                placeholder="مثال: 123456789"
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-pink-400 focus:ring-1 focus:ring-pink-300"
+                                dir="ltr"
+                              />
+                            </div>
+                          </div>
+                          {pubgBuyError && (
+                            <div className="mt-3 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold">
+                              {pubgBuyError}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (!pubgPlayerId.trim()) {
+                                setPubgBuyError("أدخل Player ID أولاً");
+                                return;
+                              }
+                              setPubgBuyError(null);
+                              pubgBuyMutation.mutate({
+                                productId: pubgSelected.id,
+                                playerId: pubgPlayerId,
+                              });
+                            }}
+                            disabled={pubgBuyMutation.isPending}
+                            className="w-full mt-4 py-3.5 rounded-xl text-white font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                            style={{ background: "linear-gradient(135deg, #db2777, #e11d48, #be185d)" }}
+                          >
+                            {pubgBuyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                            {pubgBuyMutation.isPending ? "جارٍ الشراء..." : `شراء — ${Number(pubgSelected.price).toFixed(0)} ج.س`}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
             </div>
           ) : isFreeFire ? (
             <div dir="rtl" className="-mx-0 -my-0">

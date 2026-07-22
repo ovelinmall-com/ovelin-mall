@@ -5,21 +5,25 @@ echo "=== Render Build ==="
 echo "Node: $(node --version)"
 echo "npm:  $(npm --version)"
 
-# Disable corepack strict mode so the system pnpm is used (no forced version download)
+# Disable corepack version enforcement
 export COREPACK_ENABLE_STRICT=0
 export COREPACK_ENABLE_NETWORK=0
 
-# Check if pnpm is available; install via npm if not
+# Detect or install pnpm
 if command -v pnpm > /dev/null 2>&1; then
-  echo "pnpm: $(pnpm --version) (system)"
+  PNPM_VERSION=$(pnpm --version 2>&1 || echo "unknown")
+  echo "pnpm: $PNPM_VERSION (system)"
 else
-  echo "pnpm not found — installing via npm to /tmp/pnpm-bin..."
-  npm install --prefix /tmp/pnpm-bin pnpm@9 --no-scripts 2>&1
+  echo "pnpm not in PATH — installing to /tmp via npm..."
+  # Run npm from /tmp so the repo preinstall hook is not triggered
+  cd /tmp
+  npm install --prefix /tmp/pnpm-bin --ignore-scripts pnpm@9
+  cd -
   export PATH="/tmp/pnpm-bin/node_modules/.bin:$PATH"
-  echo "pnpm: $(pnpm --version) (from /tmp)"
+  echo "pnpm: $(pnpm --version) (installed to /tmp)"
 fi
 
-# Minimal workspace — only API server + its lib dependencies
+# Minimal workspace — only what the API server needs
 cat > pnpm-workspace.yaml << 'YAML'
 packages:
   - artifacts/api-server
@@ -39,11 +43,10 @@ overrides:
   esbuild: '0.27.3'
 YAML
 
-# Remove stale lockfile
 rm -f pnpm-lock.yaml
 
 echo "Installing dependencies..."
-pnpm install --no-frozen-lockfile --ignore-scripts=false
+pnpm install --no-frozen-lockfile
 
 echo "Building @workspace/api-server..."
 pnpm --filter @workspace/api-server run build

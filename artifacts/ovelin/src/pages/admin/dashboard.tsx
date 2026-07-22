@@ -131,7 +131,7 @@ const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
   { id: "users", label: "المستخدمون", icon: Users },
   { id: "active-users", label: "النشطون الآن", icon: Wifi },
   { id: "orders", label: "الطلبات", icon: ShoppingBag },
-  { id: "pubg-orders", label: "طلبات PUBG", icon: Trophy },
+  { id: "pubg-orders", label: "🎮 شحن ببجي", icon: Trophy },
   { id: "freefire-orders", label: "🔥 شحن فري فاير", icon: Trophy },
   { id: "ff-direct-codes", label: "💎 أكواد فري فاير", icon: Trophy },
   { id: "pubg-direct-codes", label: "💎 أكواد ببجي", icon: Trophy },
@@ -1045,20 +1045,19 @@ function PubgOrdersTab() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [rejectConfirm, setRejectConfirm] = useState<{ id: number; price: string; name: string } | null>(null);
 
-  const { data: rawPubgOrders = [], isLoading, refetch } = useQuery({
+  const { data: rawOrders = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-pubg-orders"],
     queryFn: async () => {
       const res = await fetch("/api/admin/orders?platform=PUBG+Mobile", { credentials: "include" });
       if (!res.ok) throw new Error("فشل");
       return res.json() as Promise<any[]>;
     },
-    // ✅ FIX: polling كل ثانية + refetchOnMount
-    refetchInterval: 1_000,
+    refetchInterval: 3_000,
     refetchOnMount: true,
     staleTime: 0,
   });
   // استثناء طلبات "شراء كود مباشر" — تظهر فقط في تبويب أكواد ببجي
-  const orders = rawPubgOrders.filter((o: any) => o.targetInfo?.trim() !== "كود مباشر");
+  const orders = rawOrders.filter((o: any) => o.targetInfo?.trim() !== "كود مباشر");
 
   async function updateStatus(id: number, status: string) {
     setActionLoading(id);
@@ -1086,13 +1085,13 @@ function PubgOrdersTab() {
     }
   }
 
-  const PUBG_STATUS_META: Record<string, { label: string; color: string }> = {
-    pending:    { label: "⏳ انتظار",         color: "bg-amber-100 text-amber-800" },
-    processing: { label: "🔄 جارٍ التنفيذ",   color: "bg-blue-100 text-blue-800" },
-    completed:  { label: "✅ تم الشحن",        color: "bg-emerald-100 text-emerald-800" },
-    rejected:   { label: "❌ فشل التنفيذ",    color: "bg-rose-100 text-rose-800" },
-    failed:     { label: "❌ فشل",             color: "bg-rose-100 text-rose-800" },
-    cancelled:  { label: "🚫 ملغي",           color: "bg-zinc-100 text-zinc-700" },
+  const STATUS_META: Record<string, { label: string; color: string }> = {
+    pending:    { label: "⏳ انتظار",      color: "bg-amber-100 text-amber-800" },
+    processing: { label: "🔄 جارٍ الشحن", color: "bg-blue-100 text-blue-800" },
+    completed:  { label: "✅ تم الشحن",    color: "bg-emerald-100 text-emerald-800" },
+    rejected:   { label: "❌ فشل",         color: "bg-rose-100 text-rose-800" },
+    failed:     { label: "❌ فشل",         color: "bg-rose-100 text-rose-800" },
+    cancelled:  { label: "🚫 ملغي",        color: "bg-zinc-100 text-zinc-700" },
   };
 
   if (isLoading) {
@@ -1108,9 +1107,9 @@ function PubgOrdersTab() {
   if (orders.length === 0) {
     return (
       <div className="text-center py-16">
-        <div className="text-5xl mb-3">🎯</div>
-        <div className="font-bold text-amber-900 text-lg">لا توجد طلبات PUBG بعد</div>
-        <div className="text-xs text-muted-foreground mt-2">ستظهر طلبات الشحن هنا عند وردودها من العملاء</div>
+        <div className="text-5xl mb-3">💎</div>
+        <div className="font-bold text-amber-900 text-lg">لا توجد طلبات ببجي بعد</div>
+        <div className="text-xs text-muted-foreground mt-2">ستظهر طلبات الشحن هنا عند ورودها من العملاء</div>
       </div>
     );
   }
@@ -1119,24 +1118,31 @@ function PubgOrdersTab() {
     <div className="space-y-3">
       <div className="flex items-center gap-2 mb-4">
         <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-        <span className="text-sm font-bold text-amber-900">{orders.length} طلب PUBG Mobile</span>
+        <span className="text-sm font-bold text-amber-900">🎮 {orders.length} طلب ببجي</span>
       </div>
       {orders.map((o: any) => {
-        const statusMeta = PUBG_STATUS_META[o.status] ?? { label: o.status, color: "bg-zinc-100 text-zinc-700" };
+        const statusMeta = STATUS_META[o.status] ?? { label: o.status, color: "bg-zinc-100 text-zinc-700" };
         const isProcessing = actionLoading === o.id;
+        const parts = (o.targetInfo ?? "").split("|").map((s: string) => s.trim());
+        const playerName = parts[0] || "—";
+        const playerId = parts[1] || "—";
         return (
           <div key={o.id} className="rounded-2xl bg-white border-2 border-amber-100 p-4 shadow-sm">
-            {/* Header */}
             <div className="flex items-start justify-between gap-2 mb-3">
               <div className="min-w-0">
                 <div className="font-black text-amber-900 text-sm">{o.productName}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">
                   @{o.username ?? "—"} • طلب #{o.id} • {new Date(o.createdAt).toLocaleString("ar-EG")}
                 </div>
-                <div className="mt-2 flex items-center gap-2 bg-amber-50 rounded-xl px-3 py-1.5 border border-amber-200">
-                  <Trophy className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <div className="text-[11px] font-mono font-black text-amber-900 tracking-wider">{o.targetInfo ?? "—"}</div>
-                  <div className="text-[9px] text-amber-600">Player ID</div>
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-1.5 border border-amber-200">
+                    <span className="text-[10px] text-amber-500 font-bold shrink-0">اسم اللاعب</span>
+                    <span className="text-[11px] font-black text-amber-900 truncate">{playerName}</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-amber-50 rounded-xl px-3 py-1.5 border border-amber-200">
+                    <span className="text-[10px] text-amber-600 font-bold shrink-0">الايدي</span>
+                    <span className="text-[11px] font-mono font-black text-amber-900 tracking-wider">{playerId}</span>
+                  </div>
                 </div>
               </div>
               <div className="shrink-0 text-right">
@@ -1147,8 +1153,14 @@ function PubgOrdersTab() {
                 </div>
               </div>
             </div>
-
-            {/* Action Buttons */}
+            <a
+                href="https://shop2game.com/app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 w-full mb-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-[11px] font-black hover:bg-amber-100 transition-colors"
+              >
+                🔗 shop2game.com — اضغط لتنفيذ الشحن
+              </a>
             <div className="flex flex-wrap gap-1.5 pt-2 border-t border-amber-50">
               {o.status === "pending" && (
                 <button
@@ -1156,7 +1168,7 @@ function PubgOrdersTab() {
                   disabled={isProcessing}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-[11px] font-bold disabled:opacity-50"
                 >
-                  {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : "🔄"} بدء التنفيذ
+                  {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : "🔄"} بدء الشحن
                 </button>
               )}
               {(o.status === "pending" || o.status === "processing") && (
@@ -1189,7 +1201,6 @@ function PubgOrdersTab() {
         );
       })}
 
-      {/* ── مربع تأكيد الرفض ─────────────────────────────── */}
       {rejectConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" dir="rtl">
           <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-xs w-full">
@@ -1330,164 +1341,132 @@ function PubgCodesTab() {
 
   if (isLoading) return (
     <div className="space-y-3">
-      {[0,1,2].map(i => <div key={i} className="h-20 rounded-2xl bg-blue-100/40 animate-pulse" />)}
+      {[0,1,2].map(i => <div key={i} className="h-20 rounded-2xl bg-white animate-pulse" />)}
     </div>
   );
 
   return (
-    <div className="space-y-4">
-      {/* عنوان */}
-      <div className="flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-        <span className="text-sm font-bold text-blue-900">💎 أكواد ببجي المباشرة ({products.length} منتج)</span>
+    <div className="space-y-4" dir="rtl">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg font-black text-amber-900">💎 أكواد ببجي المباشرة</span>
+        <span className="text-xs text-muted-foreground">({products.length} منتج)</span>
       </div>
 
-      {/* إضافة فئة جديدة */}
-      <div className="rounded-2xl border border-dashed border-blue-300 bg-blue-50/50 p-4">
-        <p className="text-xs font-black text-blue-700 mb-3">+ إضافة فئة كود جديدة</p>
-        <input
-          className="w-full mb-2 px-3 py-2 rounded-xl border border-blue-200 text-sm outline-none focus:border-blue-400"
-          placeholder="اسم الفئة (مثال: كود 60 UC)"
-          value={newName}
-          onChange={e => setNewName(e.target.value)}
-        />
-        <div className="flex gap-2 mb-2">
+      {/* إضافة منتج جديد */}
+      <div className="rounded-2xl border-2 border-dashed border-amber-200 p-4 bg-white/50">
+        <p className="text-xs font-bold text-amber-700 mb-3">➕ إضافة فئة كود جديدة</p>
+        <div className="flex flex-col gap-2">
           <input
-            className="flex-1 px-3 py-2 rounded-xl border border-blue-200 text-sm outline-none focus:border-blue-400"
-            placeholder="السعر (ج.س)"
-            type="number"
-            value={newPrice}
-            onChange={e => setNewPrice(e.target.value)}
+            placeholder="اسم الفئة (مثال: كود 60 UC)"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400"
           />
-          <input
-            className="flex-1 px-3 py-2 rounded-xl border border-blue-200 text-sm outline-none focus:border-blue-400"
-            placeholder="عدد UC (مثال: 60)"
-            type="number"
-            value={newQty}
-            onChange={e => setNewQty(e.target.value)}
-          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="السعر"
+              value={newPrice}
+              onChange={e => setNewPrice(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400"
+            />
+            <input
+              type="number"
+              placeholder="عدد UC (مثال: 60) — مطلوب للمطابقة"
+              value={newQty}
+              onChange={e => setNewQty(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400"
+            />
+            <button
+              onClick={createProduct}
+              disabled={saving || !newName.trim() || !newPrice}
+              className="px-5 py-2 rounded-xl bg-amber-600 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "➕ إضافة"}
+            </button>
+          </div>
         </div>
-        <p className="text-[10px] text-blue-500 mb-2">⚠️ يجب إدخال عدد UC ليظهر زر الكود في صفحة الشحن</p>
-        <button
-          onClick={createProduct}
-          disabled={saving || !newName.trim() || !newPrice}
-          className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-1"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} إضافة
-        </button>
       </div>
 
       {/* قائمة المنتجات */}
       {products.length === 0 ? (
-        <div className="text-center py-10">
-          <div className="text-4xl mb-2">💎</div>
-          <p className="text-sm font-bold text-gray-600">لا توجد فئات أكواد ببجي بعد</p>
-          <p className="text-xs text-muted-foreground mt-1">أضف فئة جديدة أعلاه لتبدأ</p>
+        <div className="text-center py-12 text-muted-foreground text-sm">
+          لا توجد فئات أكواد بعد — أضف فئة جديدة أعلاه
         </div>
       ) : (
         products.map((p: any) => (
-          <div key={p.id} className="rounded-2xl bg-white border border-blue-100 shadow-sm overflow-hidden">
+          <div key={p.id} className="rounded-2xl border-2 border-amber-100 bg-white shadow-sm overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-sm"
-                  style={{ background: "linear-gradient(135deg, #1d4ed8, #2563eb)" }}>
-                  UC
-                </div>
-                <div>
-                  {editingId === p.id ? (
+            <div className="flex items-start gap-3 p-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-lg flex-shrink-0">💎</div>
+              <div className="flex-1 min-w-0">
+                {editingId === p.id ? (
+                  <div className="flex flex-col gap-2 mb-1">
                     <input
-                      className="font-bold text-sm border border-blue-300 rounded-lg px-2 py-1 w-32 outline-none"
                       value={editName}
                       onChange={e => setEditName(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-lg border border-amber-300 text-sm outline-none focus:border-amber-500"
+                      placeholder="اسم المنتج"
                     />
-                  ) : (
-                    <div className="font-bold text-sm text-gray-900">{p.name}</div>
-                  )}
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {editingId === p.id ? (
+                    <div className="flex gap-2">
                       <input
-                        className="text-xs border border-blue-300 rounded-lg px-2 py-0.5 w-20 outline-none"
+                        type="number"
                         value={editPrice}
                         onChange={e => setEditPrice(e.target.value)}
-                        type="number"
+                        className="flex-1 px-2 py-1.5 rounded-lg border border-amber-300 text-sm outline-none focus:border-amber-500"
                         placeholder="السعر"
                       />
-                    ) : (
-                      <span className="text-xs font-bold text-blue-600">{Number(p.price).toFixed(0)} ج.س</span>
-                    )}
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${p.active ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-600"}`}>
-                      {p.active ? "فعّال" : "مفعّل"}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">
-                      {p.available ?? 0} كود متاح
-                    </span>
-                    {p.quantity && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-violet-100 text-violet-700">
-                        {p.quantity} UC
-                      </span>
-                    )}
+                      <button onClick={() => saveEdit(p.id)} disabled={saving} className="px-4 py-1.5 bg-emerald-600 text-white text-xs rounded-lg font-bold disabled:opacity-50 whitespace-nowrap">
+                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "✅ حفظ"}
+                      </button>
+                      <button onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-zinc-100 text-zinc-700 text-xs rounded-lg whitespace-nowrap">إلغاء</button>
+                    </div>
                   </div>
+                ) : (
+                  <div className="font-bold text-gray-800 text-sm">{p.name}</div>
+                )}
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="font-black text-amber-600">{Number(p.price).toFixed(0)} ج.س</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${p.available > 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                    {p.available} كود متاح
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${p.active ? "bg-blue-100 text-blue-700" : "bg-zinc-100 text-zinc-500"}`}>
+                    {p.active ? "مفعّل" : "موقوف"}
+                  </span>
                 </div>
               </div>
-
-              {/* أزرار التحكم */}
-              <div className="flex items-center gap-1.5">
-                {editingId === p.id ? (
-                  <>
-                    <button onClick={() => saveEdit(p.id)} disabled={saving}
-                      className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold">
-                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                    </button>
-                    <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => { setEditingId(p.id); setEditName(p.name); setEditPrice(p.price); }}
-                      className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => toggleActive(p.id, p.active)}
-                      className={`p-1.5 rounded-lg text-xs font-bold ${p.active ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
-                      {p.active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                    <button onClick={() => deleteProduct(p.id, p.name)}
-                      className="p-1.5 rounded-lg bg-red-50 text-red-600">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </>
-                )}
+              <div className="flex gap-1 flex-shrink-0">
+                <button onClick={() => { setEditingId(p.id); setEditName(p.name); setEditPrice(String(p.price)); }} className="p-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs">✏️</button>
+                <button onClick={() => toggleActive(p.id, p.active)} className="p-1.5 rounded-lg bg-zinc-50 text-zinc-600 text-xs">{p.active ? "⏸" : "▶️"}</button>
+                <button onClick={() => deleteProduct(p.id, p.name)} className="p-1.5 rounded-lg bg-red-50 text-red-600 text-xs"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             </div>
 
-            {/* أزرار إضافة الأكواد وعرضها */}
-            <div className="px-4 pb-4 flex gap-2">
+            {/* Actions */}
+            <div className="flex gap-2 px-4 pb-3 border-t border-amber-50 pt-3">
               <button
-                onClick={() => { setAddingCodes(addingCodes === p.id ? null : p.id); setViewCodes(null); }}
-                className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center gap-1"
+                onClick={() => { setAddingCodes(addingCodes === p.id ? null : p.id); setCodesText(""); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold"
               >
-                <Plus className="w-3 h-3" /> إضافة أكواد
+                ➕ إضافة أكواد
               </button>
               <button
-                onClick={() => { setViewCodes(viewCodes === p.id ? null : p.id); setAddingCodes(null); }}
-                className="px-3 py-1.5 rounded-xl bg-zinc-100 text-zinc-700 text-xs font-bold flex items-center gap-1"
+                onClick={() => setViewCodes(viewCodes === p.id ? null : p.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 text-zinc-700 text-xs font-bold"
               >
-                <Eye className="w-3 h-3" /> عرض الأكواد
+                👁 عرض الأكواد
               </button>
             </div>
 
-            {/* منطقة إدخال الأكواد */}
+            {/* إضافة أكواد */}
             {addingCodes === p.id && (
-              <div className="px-4 pb-4 border-t border-blue-50 pt-3">
-                <p className="text-xs font-bold text-gray-600 mb-2">أكواد جديدة (كل كود في سطر)</p>
+              <div className="px-4 pb-4">
                 <textarea
-                  rows={5}
+                  rows={4}
                   placeholder="الصق الأكواد هنا (كل كود في سطر جديد)"
                   value={codesText}
                   onChange={e => setCodesText(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-blue-200 text-sm outline-none focus:border-blue-400 font-mono text-xs resize-none"
+                  className="w-full px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400 font-mono text-xs resize-none"
                   dir="ltr"
                 />
                 <div className="flex gap-2 mt-2">
@@ -1505,7 +1484,7 @@ function PubgCodesTab() {
 
             {/* عرض الأكواد المتاحة */}
             {viewCodes === p.id && (
-              <div className="px-4 pb-4 border-t border-blue-50 pt-3">
+              <div className="px-4 pb-4 border-t border-amber-50 pt-3">
                 <p className="text-xs font-bold text-gray-600 mb-2">الأكواد المتاحة ({codesList.length})</p>
                 {codesList.length === 0 ? (
                   <p className="text-xs text-muted-foreground">لا توجد أكواد متاحة</p>
@@ -1526,64 +1505,10 @@ function PubgCodesTab() {
           </div>
         ))
       )}
-
-      {/* تبويب طلبات الأكواد */}
-      <PubgCodeOrdersTab />
     </div>
   );
 }
 
-function PubgCodeOrdersTab() {
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
-
-  const { data: rawOrders = [], isLoading, refetch } = useQuery({
-    queryKey: ["admin-pubg-code-orders"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/orders?platform=PUBG+Mobile", { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json() as Promise<any[]>;
-    },
-    refetchInterval: 5_000,
-    staleTime: 0,
-  });
-  // فقط طلبات "شراء كود مباشر"
-  const orders = rawOrders.filter((o: any) => o.targetInfo?.trim() === "كود مباشر");
-
-  if (isLoading || orders.length === 0) return null;
-
-  return (
-    <div className="mt-6">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-        <span className="text-sm font-bold text-violet-900">🛒 طلبات أكواد ببجي ({orders.length})</span>
-      </div>
-      <div className="space-y-2">
-        {orders.map((o: any) => (
-          <div key={o.id} className="rounded-xl bg-white border border-violet-100 p-3 shadow-sm">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="font-bold text-violet-900 text-sm">{o.productName}</div>
-                <div className="text-[10px] text-muted-foreground">@{o.username ?? "—"} • طلب #{o.id}</div>
-                {o.deliveredCode && (
-                  <div className="mt-1 font-mono text-xs text-emerald-700 bg-emerald-50 rounded px-2 py-0.5">
-                    ✅ {o.deliveredCode}
-                  </div>
-                )}
-              </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                o.status === "completed" ? "bg-emerald-100 text-emerald-700" :
-                o.status === "pending" ? "bg-amber-100 text-amber-700" :
-                "bg-rose-100 text-rose-700"
-              }`}>
-                {o.status === "completed" ? "✅ تم" : o.status === "pending" ? "⏳ انتظار" : o.status}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function FreefireCodesTab() {
   const qc = useQueryClient();

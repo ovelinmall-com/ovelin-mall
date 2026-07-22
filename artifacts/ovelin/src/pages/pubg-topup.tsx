@@ -1,218 +1,252 @@
 import { useState } from "react";
-import { Link } from "wouter";
-import { motion } from "framer-motion";
-import { ArrowRight, Crown, ShieldCheck, Zap } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Zap, ShieldCheck, Crown, Headphones } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 
-// ─── UC Packages ─────────────────────────────────────────
-const UC_PACKAGES = [
-  { id: 1, amount: 60,   label: "60 UC"   },
-  { id: 2, amount: 325,  label: "325 UC"  },
-  { id: 3, amount: 660,  label: "660 UC"  },
-  { id: 4, amount: 1800, label: "1,800 UC" },
-  { id: 5, amount: 3850, label: "3,850 UC" },
-  { id: 6, amount: 8100, label: "8,100 UC" },
+// ─── نفس features فري فاير بالضبط ─────────────────────────
+const FEATURES = [
+  { icon: Zap,         label: "تسليم فوري" },
+  { icon: ShieldCheck, label: "ضمان كامل" },
+  { icon: Crown,       label: "أرخص الأسعار" },
+  { icon: Headphones,  label: "دعم 24/7" },
 ];
 
-// ─── UC Icon (bullet/circle) ──────────────────────────────
-function UCIcon({ size = 28, selected = false }: { size?: number; selected?: boolean }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <circle
-        cx="16" cy="16" r="14"
-        fill={selected ? "url(#ucGradSel)" : "url(#ucGrad)"}
-        opacity={selected ? 1 : 0.55}
-      />
-      <text
-        x="16" y="21"
-        textAnchor="middle"
-        fontSize="13"
-        fontWeight="900"
-        fill="white"
-        fontFamily="sans-serif"
-      >
-        UC
-      </text>
-      <defs>
-        <radialGradient id="ucGrad" cx="40%" cy="35%" r="60%">
-          <stop offset="0%" stopColor="#f472b6" />
-          <stop offset="100%" stopColor="#9333ea" />
-        </radialGradient>
-        <radialGradient id="ucGradSel" cx="40%" cy="35%" r="60%">
-          <stop offset="0%" stopColor="#fb7185" />
-          <stop offset="100%" stopColor="#d946ef" />
-        </radialGradient>
-      </defs>
-    </svg>
-  );
-}
+// ─── باقات UC ────────────────────────────────────────────────
+const UC_AMOUNTS = [60, 325, 660, 1800, 3850, 8100];
 
 export default function PubgTopup() {
   const [selected, setSelected] = useState<number | null>(null);
 
   return (
     <AppLayout>
-      <div dir="rtl" className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 pb-24">
+      <div dir="rtl" className="-mx-0 -my-0">
 
-        {/* ══ HERO ══════════════════════════════════════════ */}
-        <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
-          {/* Background image */}
+        {/* ══ HERO — نفس فري فاير بالضبط ══════════════════════ */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative w-full overflow-hidden"
+          style={{ height: "300px" }}
+        >
+          {/* Spark keyframes — نفس فري فاير */}
+          <style>{`
+            @keyframes ff-spark {
+              0%   { opacity: 0;   transform: translate(0, 0) scale(1); }
+              18%  { opacity: 1; }
+              70%  { opacity: 0.5; transform: translate(var(--dx, 6px), -70px) scale(0.55); }
+              100% { opacity: 0;   transform: translate(var(--dx, 10px), -120px) scale(0.15); }
+            }
+            @keyframes ff-spark2 {
+              0%, 100% { opacity: 0;   transform: translate(0,0) scale(0.4); }
+              25%      { opacity: 0.9; transform: translate(var(--dx,-5px), -40px) scale(1); }
+              75%      { opacity: 0.2; transform: translate(var(--dx, 8px), -90px) scale(0.35); }
+            }
+            .ff-sp  { animation: ff-spark  var(--d,4s)   var(--delay,0s) ease-out    infinite; }
+            .ff-sp2 { animation: ff-spark2 var(--d,5.5s) var(--delay,0s) ease-in-out infinite; }
+          `}</style>
+
+          {/* Background image — PUBG */}
           <img
             src="/games/pubg.jpg"
             alt="PUBG Mobile"
-            className="absolute inset-0 w-full h-full object-cover object-top"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ objectPosition: "center top" }}
           />
-          {/* Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-zinc-950" />
-          <div className="absolute inset-0"
-            style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(236,72,153,0.22) 0%, transparent 70%)" }}
-          />
+          {/* Red overlay — نفس فري فاير */}
+          <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, rgba(190,24,93,0.82) 0%, rgba(225,29,72,0.75) 40%, rgba(100,0,30,0.88) 100%)" }} />
+          {/* Shimmer layer */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 32px)",
+          }} />
 
-          {/* Back button */}
-          <div className="relative px-4 pt-4">
-            <Link href="/game/pubg">
-              <button className="flex items-center gap-1 text-white/75 hover:text-white text-sm font-semibold">
-                <ArrowRight className="h-4 w-4" />
-                رجوع
-              </button>
-            </Link>
-          </div>
+          {/* Sparks — نفس فري فاير بالضبط */}
+          {[
+            { left: "6%",  bottom: "8%",  delay: "0s",    dur: "4.2s",  dx: "5px",  size: 3, cls: "ff-sp"  },
+            { left: "15%", bottom: "20%", delay: "1.1s",  dur: "5.0s",  dx: "-7px", size: 2, cls: "ff-sp2" },
+            { left: "26%", bottom: "5%",  delay: "0.5s",  dur: "3.8s",  dx: "9px",  size: 4, cls: "ff-sp"  },
+            { left: "38%", bottom: "30%", delay: "2.0s",  dur: "5.5s",  dx: "-4px", size: 2, cls: "ff-sp2" },
+            { left: "50%", bottom: "12%", delay: "0.3s",  dur: "4.6s",  dx: "6px",  size: 3, cls: "ff-sp"  },
+            { left: "62%", bottom: "40%", delay: "1.5s",  dur: "5.2s",  dx: "-8px", size: 2, cls: "ff-sp2" },
+            { left: "73%", bottom: "7%",  delay: "0.8s",  dur: "4.0s",  dx: "5px",  size: 4, cls: "ff-sp"  },
+            { left: "84%", bottom: "25%", delay: "2.3s",  dur: "5.8s",  dx: "-6px", size: 2, cls: "ff-sp2" },
+            { left: "91%", bottom: "10%", delay: "0.6s",  dur: "4.4s",  dx: "7px",  size: 3, cls: "ff-sp"  },
+            { left: "20%", bottom: "55%", delay: "1.8s",  dur: "6.0s",  dx: "-5px", size: 2, cls: "ff-sp2" },
+            { left: "44%", bottom: "60%", delay: "0.9s",  dur: "5.4s",  dx: "4px",  size: 2, cls: "ff-sp"  },
+            { left: "68%", bottom: "50%", delay: "2.6s",  dur: "4.8s",  dx: "-9px", size: 3, cls: "ff-sp2" },
+          ].map((s, i) => (
+            <div
+              key={i}
+              className={s.cls}
+              style={{
+                position: "absolute",
+                bottom: s.bottom,
+                left: s.left,
+                width: s.size,
+                height: s.size,
+                borderRadius: "50%",
+                background: "radial-gradient(circle, #fff 0%, #f97316 60%, transparent 100%)",
+                "--delay": s.delay,
+                "--d": s.dur,
+                "--dx": s.dx,
+              } as React.CSSProperties}
+            />
+          ))}
 
-          {/* Title block */}
-          <div className="relative text-center px-4 pt-4 pb-12">
-            {/* Game logo circle */}
-            <div className="mx-auto mb-3 h-20 w-20 rounded-2xl overflow-hidden ring-2 ring-white/20 shadow-2xl shadow-pink-500/30">
-              <img src="/games/pubg.jpg" alt="PUBG Mobile" className="w-full h-full object-cover" />
-            </div>
-
-            <h1
-              className="text-4xl font-black tracking-widest text-white"
-              style={{ textShadow: "0 0 28px rgba(236,72,153,0.65), 0 2px 12px rgba(0,0,0,0.7)" }}
+          {/* Title card — center — نفس فري فاير */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div
+              className="text-center px-8 py-4 rounded-2xl mx-8"
+              style={{
+                background: "rgba(255,255,255,0.10)",
+                backdropFilter: "blur(14px)",
+                border: "1px solid rgba(255,255,255,0.22)",
+                boxShadow: "0 8px 40px rgba(0,0,0,0.3)",
+              }}
             >
-              PUBG MOBILE
-            </h1>
-            <p className="mt-1 text-sm font-semibold text-white/70">اشحن UC الآن</p>
-          </div>
-        </div>
-
-        {/* ══ CONTENT ══════════════════════════════════════ */}
-        <div className="px-4 -mt-4 relative z-10">
-
-          {/* ── Feature badges ── */}
-          <div className="flex gap-2 mb-6 justify-center flex-wrap">
-            {[
-              { icon: <Crown className="h-3.5 w-3.5 text-amber-400" />, label: "أرخص الأسعار" },
-              { icon: <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />, label: "ضمان كامل" },
-              { icon: <Zap className="h-3.5 w-3.5 text-pink-400" />, label: "تسليم فوري" },
-            ].map((b) => (
-              <div
-                key={b.label}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-pink-800/40 bg-white/5 text-[12px] font-bold text-white/85"
+              <p
+                className="text-white font-black text-4xl leading-none tracking-widest"
+                style={{ textShadow: "0 0 24px rgba(255,120,0,0.7), 0 2px 10px rgba(0,0,0,0.6)" }}
               >
-                {b.icon}
-                {b.label}
+                PUBG MOBILE
+              </p>
+              <div className="mt-2 h-px mx-2" style={{ background: "linear-gradient(90deg, transparent, rgba(255,165,0,0.8), transparent)" }} />
+              <p className="text-white/85 text-sm mt-2 font-semibold tracking-wide">اشحن UC الآن</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ══ CONTENT — نفس فري فاير ══════════════════════════ */}
+        <div className="bg-white px-4 pt-5 pb-10">
+
+          {/* Features strip — نفس فري فاير بالضبط */}
+          <div className="flex gap-2.5 mb-5 overflow-x-auto pb-1 no-scrollbar">
+            {FEATURES.map((f, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 relative"
+                style={{
+                  padding: "7px 16px",
+                  borderRadius: "999px",
+                  background: "linear-gradient(135deg, rgba(220,38,38,0.08) 0%, rgba(190,24,93,0.06) 100%)",
+                  border: "1.5px solid rgba(220,38,38,0.35)",
+                  boxShadow: "0 2px 10px rgba(220,38,38,0.10), inset 0 1px 0 rgba(255,255,255,0.8)",
+                }}
+              >
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-red-300 text-[8px] font-black leading-none select-none">⌒</span>
+                <f.icon className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                <span className="text-gray-800 text-xs font-bold">{f.label}</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-red-300 text-[8px] font-black leading-none select-none">⌒</span>
               </div>
             ))}
           </div>
 
-          {/* ── Package selector ── */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1 h-4 rounded-full bg-gradient-to-b from-pink-500 to-fuchsia-500" />
-              <span className="text-white font-black text-sm">اختر باقتك</span>
-            </div>
-
-            {/* Scrollable row — نفس تصميم فري فاير */}
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
-              {UC_PACKAGES.map((pkg, i) => {
-                const isSelected = selected === pkg.id;
-                return (
-                  <motion.button
-                    key={pkg.id}
-                    whileTap={{ scale: 0.93 }}
-                    onClick={() => setSelected(isSelected ? null : pkg.id)}
-                    snap-align="start"
-                    className={`
-                      relative flex-shrink-0 flex flex-col items-center justify-center gap-1.5
-                      w-[80px] rounded-2xl border-2 py-3 px-2 transition-all duration-200
-                      ${isSelected
-                        ? "border-pink-500 bg-gradient-to-b from-pink-600/30 to-fuchsia-700/20 shadow-[0_0_20px_rgba(236,72,153,0.45)]"
-                        : "border-white/10 bg-white/5 hover:border-pink-700/50"
-                      }
-                    `}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.06, type: "spring", stiffness: 260, damping: 22 }}
-                  >
-                    <UCIcon size={30} selected={isSelected} />
-
-                    <span
-                      className={`text-[13px] font-black leading-tight text-center ${
-                        isSelected ? "text-white" : "text-pink-200/80"
-                      }`}
-                    >
-                      {pkg.amount >= 1000
-                        ? pkg.amount.toLocaleString("en-US")
-                        : pkg.amount}
-                    </span>
-                    <span className={`text-[9px] font-bold ${isSelected ? "text-pink-300" : "text-pink-400/60"}`}>
-                      UC
-                    </span>
-
-                    {/* Selected ring pulse */}
-                    {isSelected && (
-                      <motion.div
-                        className="absolute inset-0 rounded-2xl border-2 border-pink-400"
-                        initial={{ opacity: 0.6, scale: 1 }}
-                        animate={{ opacity: 0, scale: 1.06 }}
-                        transition={{ duration: 0.6, repeat: Infinity }}
-                      />
-                    )}
-                  </motion.button>
-                );
-              })}
-            </div>
+          {/* Section title — نفس فري فاير */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-gradient-to-l from-red-300 to-transparent" />
+            <span className="text-gray-800 font-bold text-sm px-2">اختر باقتك</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-pink-300 to-transparent" />
           </div>
 
-          {/* ── Selected badge ── */}
-          {selected !== null && (
-            <motion.div
-              key={selected}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-5 flex items-center justify-center gap-2 bg-pink-500/15 border border-pink-500/40 rounded-2xl py-3 px-4"
-            >
-              <UCIcon size={22} selected />
-              <span className="text-white font-black text-sm">
-                {UC_PACKAGES.find(p => p.id === selected)?.label} — تم الاختيار ✓
-              </span>
-            </motion.div>
-          )}
+          {/* Packages Grid — 6 باقات UC بنفس تصميم فري فاير */}
+          <div className="grid grid-cols-3 gap-2">
+            {UC_AMOUNTS.map((uc) => {
+              const isSelected = selected === uc;
+              return (
+                <motion.button
+                  key={uc}
+                  whileTap={{ scale: 0.92 }}
+                  onClick={() => setSelected((prev) => prev === uc ? null : uc)}
+                  style={isSelected ? {
+                    border: "2px solid #db2777",
+                    background: "#fef2f2",
+                    boxShadow: "0 0 16px 4px rgba(220,38,38,0.45), 0 4px 12px rgba(220,38,38,0.3)",
+                  } : {
+                    border: "2px solid #db2777",
+                    background: "white",
+                    cursor: "pointer",
+                  }}
+                  className="flex flex-col items-center justify-center rounded-2xl py-3 px-1 transition-all relative"
+                >
+                  <span
+                    className="text-base leading-none mb-1"
+                    style={{
+                      filter: "hue-rotate(150deg) saturate(3) brightness(0.95) drop-shadow(0 0 5px rgba(220,38,38,0.9))",
+                    }}
+                  >💎</span>
+                  <span className={`font-black text-xs leading-none ${isSelected ? "text-red-600" : "text-gray-800"}`}>
+                    {uc.toLocaleString("en-US")}
+                  </span>
+                  <span className={`text-[9px] font-bold leading-none mt-0.5 ${isSelected ? "text-red-400" : "text-gray-400"}`}>
+                    UC
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
 
-          {/* ── كيف تشحن؟ ── */}
-          <div className="rounded-2xl border border-pink-800/30 bg-white/5 p-4 mb-4">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-5 h-5 rounded-full bg-pink-500/25 border border-pink-500/50 flex items-center justify-center">
-                <span className="text-pink-300 text-[10px] font-black">?</span>
-              </div>
-              <span className="text-white font-black text-sm">كيف تشحن؟</span>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {[
-                { n: "1", text: "اختر الباقة المناسبة" },
-                { n: "2", text: "أدخل اسمك وID حسابك في PUBG Mobile" },
-                { n: "3", text: "أتمّ الطلب من محفظتك" },
-              ].map((step) => (
-                <div key={step.n} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md">
-                    <span className="text-white text-[11px] font-black">{step.n}</span>
-                  </div>
-                  <span className="text-pink-100/80 text-sm font-semibold leading-snug">{step.text}</span>
+          {/* Selected info row — نفس فري فاير */}
+          <AnimatePresence>
+            {selected !== null && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mt-4"
+              >
+                <div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-red-200 bg-white">
+                  <span className="font-bold text-gray-800 text-sm">
+                    💎 {selected.toLocaleString("en-US")} UC
+                  </span>
+                  <span className="font-black text-red-600 text-lg">تم الاختيار ✓</span>
                 </div>
-              ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Info Banner — كيف تشحن؟ — نفس فري فاير */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 rounded-2xl overflow-hidden bg-white border border-red-100"
+            style={{ boxShadow: "0 2px 16px rgba(220,38,38,0.08)" }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center gap-2 px-4 py-3 border-b border-red-100"
+              style={{ background: "linear-gradient(90deg, #fef2f2, #fff5f5)" }}
+            >
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, #db2777, #e11d48)" }}
+              >
+                <span className="text-white text-[10px] font-black">؟</span>
+              </div>
+              <h4 className="text-gray-800 font-bold text-sm">كيف تشحن؟</h4>
             </div>
-          </div>
+            {/* Steps */}
+            {[
+              "اختر الباقة المناسبة",
+              "أدخل اسمك وID حسابك في PUBG Mobile",
+              "أكّد الطلب من محفظتك",
+              "ستصلك الـ UC خلال دقائق ✅",
+            ].map((step, i) => (
+              <div key={i}>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-white font-black text-[11px]"
+                    style={{ background: "linear-gradient(135deg, #db2777, #e11d48)" }}
+                  >
+                    {i + 1}
+                  </div>
+                  <span className="text-gray-600 text-xs leading-relaxed flex-1">{step}</span>
+                </div>
+                {i < 3 && (
+                  <div className="h-px mx-4" style={{ background: "linear-gradient(90deg, transparent, rgba(220,38,38,0.12), transparent)" }} />
+                )}
+              </div>
+            ))}
+          </motion.div>
 
         </div>
       </div>

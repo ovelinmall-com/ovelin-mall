@@ -1,20 +1,19 @@
 #!/bin/sh
 set -ex
 
-# ─── Fix: disable corepack strict version enforcement ───────────────────────
-# package.json has "packageManager": "pnpm@9.15.4" which makes corepack try
-# to download that exact version. On Render this fails. Setting this env var
-# tells corepack to use whatever pnpm is available without enforcing the pin.
-export COREPACK_ENABLE_STRICT=0
-export COREPACK_ENABLE_AUTO_PIN=0
+# ─── Fix: pnpm & corepack version enforcement ───────────────────────────────
+# package.json has "packageManager": "pnpm@9.15.4". Both pnpm itself and
+# corepack try to enforce this exact version and fail on Render because the
+# binary isn't pre-cached. Disable both checks:
+export PNPM_PACKAGE_MANAGER_STRICT=0          # pnpm's own version switch
+export COREPACK_ENABLE_STRICT=0               # corepack strict mode
+export COREPACK_ENABLE_AUTO_PIN=0             # corepack auto pin
 
 echo "=== Render Build Script ==="
 echo "Node: $(node --version)"
 echo "npm: $(npm --version)"
-echo "PATH: $PATH"
-echo "which pnpm: $(which pnpm 2>&1 || echo NOT_FOUND)"
 echo "pnpm version: $(pnpm --version 2>&1 || echo UNAVAILABLE)"
-echo "COREPACK: $(corepack --version 2>&1 || echo NOT_FOUND)"
+echo "PATH: $PATH"
 
 # ─── Minimal workspace for Render (backend only) ────────────────────────────
 cat > pnpm-workspace.yaml << 'YAML'
@@ -39,10 +38,10 @@ YAML
 
 rm -f pnpm-lock.yaml
 
-echo "Workspace config created, installing..."
+echo "Installing dependencies..."
 pnpm install --no-frozen-lockfile
 
 echo "Building API server..."
 pnpm --filter @workspace/api-server run build
 
-echo "Build complete!"
+echo "=== Build complete! ==="

@@ -162,4 +162,36 @@ router.get("/ff-code-products", async (_req, res) => {
   }
 });
 
+
+// أكواد PUBG المباشرة — قائمة عامة مع عدد الأكواد المتاحة
+router.get("/pubg-code-products", async (_req, res) => {
+  try {
+    const products = await db
+      .select()
+      .from(productsTable)
+      .where(
+        and(
+          eq(productsTable.platform, "PUBG Mobile"),
+          eq(productsTable.category, "pubg-direct-code"),
+          eq(productsTable.active, true),
+        ),
+      )
+      .orderBy(asc(productsTable.price));
+
+    const counts = await db
+      .select({
+        productId: productCodesTable.productId,
+        available: sql<number>\`count(*)::int\`,
+      })
+      .from(productCodesTable)
+      .where(eq(productCodesTable.status, "available"))
+      .groupBy(productCodesTable.productId);
+
+    const countMap = new Map(counts.map((c) => [c.productId, c.available]));
+    res.json(products.map((p) => ({ ...p, available: countMap.get(p.id) ?? 0 })));
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message ?? "فشل" });
+  }
+});
+
 export default router;

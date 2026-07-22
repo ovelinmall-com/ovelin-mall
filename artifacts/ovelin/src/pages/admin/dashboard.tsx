@@ -104,6 +104,7 @@ type Tab =
   | "pubg-orders"
   | "freefire-orders"
   | "ff-direct-codes"
+  | "pubg-direct-codes"
   | "products"
   | "transactions"
   | "deposit-requests"
@@ -133,6 +134,7 @@ const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
   { id: "pubg-orders", label: "طلبات PUBG", icon: Trophy },
   { id: "freefire-orders", label: "🔥 شحن فري فاير", icon: Trophy },
   { id: "ff-direct-codes", label: "💎 أكواد فري فاير", icon: Trophy },
+  { id: "pubg-direct-codes", label: "💎 أكواد ببجي", icon: Trophy },
   { id: "products", label: "المنتجات", icon: Package },
   { id: "transactions", label: "المعاملات", icon: CreditCard },
   { id: "deposit-requests", label: "طلبات الشحن", icon: Wallet },
@@ -161,7 +163,7 @@ export default function AdminDashboard() {
   const initialTab = (): Tab => {
     try {
       const p = new URLSearchParams(window.location.search).get("tab") as Tab | null;
-      const valid: Tab[] = ["stats","users","active-users","orders","pubg-orders","freefire-orders","ff-direct-codes","products",
+      const valid: Tab[] = ["stats","users","active-users","orders","pubg-orders","freefire-orders","ff-direct-codes","pubg-direct-codes","products",
         "transactions","deposit-requests","referral-withdrawals","service-maintenance",
         "support","faq","status","prizes","achievements","travel","giftcards","notify",
         "settings","system","posts","analytics","activity"];
@@ -335,6 +337,7 @@ export default function AdminDashboard() {
           {tab === "pubg-orders" && <PubgOrdersTab />}
           {tab === "freefire-orders" && <FreefireOrdersTab />}
           {tab === "ff-direct-codes" && <FreefireCodesTab />}
+          {tab === "pubg-direct-codes" && <PubgCodesTab />}
           {tab === "products" && <ProductsTab qc={qc} />}
           {tab === "transactions" && <TransactionsTab qc={qc} />}
           {tab === "deposit-requests" && <DepositRequestsTab />}
@@ -1042,7 +1045,7 @@ function PubgOrdersTab() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [rejectConfirm, setRejectConfirm] = useState<{ id: number; price: string; name: string } | null>(null);
 
-  const { data: orders = [], isLoading, refetch } = useQuery({
+  const { data: rawPubgOrders = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-pubg-orders"],
     queryFn: async () => {
       const res = await fetch("/api/admin/orders?platform=PUBG+Mobile", { credentials: "include" });
@@ -1054,6 +1057,8 @@ function PubgOrdersTab() {
     refetchOnMount: true,
     staleTime: 0,
   });
+  // استثناء طلبات "شراء كود مباشر" — تظهر فقط في تبويب أكواد ببجي
+  const orders = rawPubgOrders.filter((o: any) => o.targetInfo?.trim() !== "كود مباشر");
 
   async function updateStatus(id: number, status: string) {
     setActionLoading(id);
@@ -1210,6 +1215,372 @@ function PubgOrdersTab() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+function PubgCodesTab() {
+  const qc = useQueryClient();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editPrice, setEditPrice] = useState("");
+  const [editName, setEditName] = useState("");
+  const [addingCodes, setAddingCodes] = useState<number | null>(null);
+  const [codesText, setCodesText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+  const [newQty, setNewQty] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [viewCodes, setViewCodes] = useState<number | null>(null);
+
+  const { data: products = [], isLoading, refetch } = useQuery({
+    queryKey: ["admin-pubg-code-products"],
+    queryFn: async () => {
+      const res = await fetch("/api/pubg-code-products", { credentials: "include" });
+      if (!res.ok) throw new Error("فشل");
+      return res.json() as Promise<any[]>;
+    },
+    refetchOnMount: true,
+    staleTime: 0,
+  });
+
+  const { data: codesList = [] } = useQuery({
+    queryKey: ["admin-pubg-codes-list", viewCodes],
+    queryFn: async () => {
+      if (!viewCodes) return [];
+      const res = await fetch(`/api/admin/products/${viewCodes}/codes?status=available`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json() as Promise<any[]>;
+    },
+    enabled: !!viewCodes,
+    staleTime: 0,
+  });
+
+  async function createProduct() {
+    if (!newName.trim() || !newPrice) return;
+    setSaving(true);
+    try {
+      await fetch("/api/admin/products", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim(), price: newPrice, quantity: newQty.trim() || null, category: "pubg-direct-code", platform: "PUBG Mobile", active: true }),
+      });
+      setNewName(""); setNewPrice(""); setNewQty("");
+      refetch();
+      qc.invalidateQueries({ queryKey: ["pubg-code-products"] });
+    } finally { setSaving(false); }
+  }
+
+  async function saveEdit(id: number) {
+    setSaving(true);
+    try {
+      await fetch(`/api/admin/products/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price: editPrice, name: editName }),
+      });
+      setEditingId(null);
+      refetch();
+      qc.invalidateQueries({ queryKey: ["pubg-code-products"] });
+    } finally { setSaving(false); }
+  }
+
+  async function toggleActive(id: number, current: boolean) {
+    await fetch(`/api/admin/products/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !current }),
+    });
+    refetch();
+    qc.invalidateQueries({ queryKey: ["pubg-code-products"] });
+  }
+
+  async function deleteProduct(id: number, name: string) {
+    if (!confirm(`حذف منتج "${name}"؟`)) return;
+    await fetch(`/api/admin/products/${id}`, { method: "DELETE", credentials: "include" });
+    refetch();
+    qc.invalidateQueries({ queryKey: ["pubg-code-products"] });
+  }
+
+  async function addCodes(productId: number) {
+    if (!codesText.trim()) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/admin/products/${productId}/codes`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codes: codesText }),
+      });
+      setCodesText(""); setAddingCodes(null);
+      refetch();
+      qc.invalidateQueries({ queryKey: ["admin-pubg-codes-list", productId] });
+    } finally { setSaving(false); }
+  }
+
+  async function deleteCode(codeId: number) {
+    await fetch(`/api/admin/codes/${codeId}`, { method: "DELETE", credentials: "include" });
+    qc.invalidateQueries({ queryKey: ["admin-pubg-codes-list", viewCodes] });
+    refetch();
+  }
+
+  if (isLoading) return (
+    <div className="space-y-3">
+      {[0,1,2].map(i => <div key={i} className="h-20 rounded-2xl bg-blue-100/40 animate-pulse" />)}
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* عنوان */}
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+        <span className="text-sm font-bold text-blue-900">💎 أكواد ببجي المباشرة ({products.length} منتج)</span>
+      </div>
+
+      {/* إضافة فئة جديدة */}
+      <div className="rounded-2xl border border-dashed border-blue-300 bg-blue-50/50 p-4">
+        <p className="text-xs font-black text-blue-700 mb-3">+ إضافة فئة كود جديدة</p>
+        <input
+          className="w-full mb-2 px-3 py-2 rounded-xl border border-blue-200 text-sm outline-none focus:border-blue-400"
+          placeholder="اسم الفئة (مثال: كود 60 UC)"
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+        />
+        <div className="flex gap-2 mb-2">
+          <input
+            className="flex-1 px-3 py-2 rounded-xl border border-blue-200 text-sm outline-none focus:border-blue-400"
+            placeholder="السعر (ج.س)"
+            type="number"
+            value={newPrice}
+            onChange={e => setNewPrice(e.target.value)}
+          />
+          <input
+            className="flex-1 px-3 py-2 rounded-xl border border-blue-200 text-sm outline-none focus:border-blue-400"
+            placeholder="عدد UC (مثال: 60)"
+            type="number"
+            value={newQty}
+            onChange={e => setNewQty(e.target.value)}
+          />
+        </div>
+        <p className="text-[10px] text-blue-500 mb-2">⚠️ يجب إدخال عدد UC ليظهر زر الكود في صفحة الشحن</p>
+        <button
+          onClick={createProduct}
+          disabled={saving || !newName.trim() || !newPrice}
+          className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-1"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} إضافة
+        </button>
+      </div>
+
+      {/* قائمة المنتجات */}
+      {products.length === 0 ? (
+        <div className="text-center py-10">
+          <div className="text-4xl mb-2">💎</div>
+          <p className="text-sm font-bold text-gray-600">لا توجد فئات أكواد ببجي بعد</p>
+          <p className="text-xs text-muted-foreground mt-1">أضف فئة جديدة أعلاه لتبدأ</p>
+        </div>
+      ) : (
+        products.map((p: any) => (
+          <div key={p.id} className="rounded-2xl bg-white border border-blue-100 shadow-sm overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-sm"
+                  style={{ background: "linear-gradient(135deg, #1d4ed8, #2563eb)" }}>
+                  UC
+                </div>
+                <div>
+                  {editingId === p.id ? (
+                    <input
+                      className="font-bold text-sm border border-blue-300 rounded-lg px-2 py-1 w-32 outline-none"
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                    />
+                  ) : (
+                    <div className="font-bold text-sm text-gray-900">{p.name}</div>
+                  )}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {editingId === p.id ? (
+                      <input
+                        className="text-xs border border-blue-300 rounded-lg px-2 py-0.5 w-20 outline-none"
+                        value={editPrice}
+                        onChange={e => setEditPrice(e.target.value)}
+                        type="number"
+                        placeholder="السعر"
+                      />
+                    ) : (
+                      <span className="text-xs font-bold text-blue-600">{Number(p.price).toFixed(0)} ج.س</span>
+                    )}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${p.active ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-600"}`}>
+                      {p.active ? "فعّال" : "مفعّل"}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">
+                      {p.available ?? 0} كود متاح
+                    </span>
+                    {p.quantity && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-violet-100 text-violet-700">
+                        {p.quantity} UC
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* أزرار التحكم */}
+              <div className="flex items-center gap-1.5">
+                {editingId === p.id ? (
+                  <>
+                    <button onClick={() => saveEdit(p.id)} disabled={saving}
+                      className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold">
+                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    </button>
+                    <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg bg-zinc-100 text-zinc-600 text-xs">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => { setEditingId(p.id); setEditName(p.name); setEditPrice(p.price); }}
+                      className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => toggleActive(p.id, p.active)}
+                      className={`p-1.5 rounded-lg text-xs font-bold ${p.active ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>
+                      {p.active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                    <button onClick={() => deleteProduct(p.id, p.name)}
+                      className="p-1.5 rounded-lg bg-red-50 text-red-600">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* أزرار إضافة الأكواد وعرضها */}
+            <div className="px-4 pb-4 flex gap-2">
+              <button
+                onClick={() => { setAddingCodes(addingCodes === p.id ? null : p.id); setViewCodes(null); }}
+                className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> إضافة أكواد
+              </button>
+              <button
+                onClick={() => { setViewCodes(viewCodes === p.id ? null : p.id); setAddingCodes(null); }}
+                className="px-3 py-1.5 rounded-xl bg-zinc-100 text-zinc-700 text-xs font-bold flex items-center gap-1"
+              >
+                <Eye className="w-3 h-3" /> عرض الأكواد
+              </button>
+            </div>
+
+            {/* منطقة إدخال الأكواد */}
+            {addingCodes === p.id && (
+              <div className="px-4 pb-4 border-t border-blue-50 pt-3">
+                <p className="text-xs font-bold text-gray-600 mb-2">أكواد جديدة (كل كود في سطر)</p>
+                <textarea
+                  rows={5}
+                  placeholder="الصق الأكواد هنا (كل كود في سطر جديد)"
+                  value={codesText}
+                  onChange={e => setCodesText(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-blue-200 text-sm outline-none focus:border-blue-400 font-mono text-xs resize-none"
+                  dir="ltr"
+                />
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => addCodes(p.id)}
+                    disabled={saving || !codesText.trim()}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ الأكواد"}
+                  </button>
+                  <button onClick={() => setAddingCodes(null)} className="px-3 py-2 rounded-xl bg-zinc-100 text-zinc-700 text-sm">إلغاء</button>
+                </div>
+              </div>
+            )}
+
+            {/* عرض الأكواد المتاحة */}
+            {viewCodes === p.id && (
+              <div className="px-4 pb-4 border-t border-blue-50 pt-3">
+                <p className="text-xs font-bold text-gray-600 mb-2">الأكواد المتاحة ({codesList.length})</p>
+                {codesList.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">لا توجد أكواد متاحة</p>
+                ) : (
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {codesList.map((c: any) => (
+                      <div key={c.id} className="flex items-center justify-between bg-zinc-50 rounded-lg px-3 py-1.5 border border-zinc-100">
+                        <span className="text-xs font-mono text-gray-700">{c.code}</span>
+                        <button onClick={() => deleteCode(c.id)} className="text-red-500 hover:text-red-700 ml-2">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+
+      {/* تبويب طلبات الأكواد */}
+      <PubgCodeOrdersTab />
+    </div>
+  );
+}
+
+function PubgCodeOrdersTab() {
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+
+  const { data: rawOrders = [], isLoading, refetch } = useQuery({
+    queryKey: ["admin-pubg-code-orders"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/orders?platform=PUBG+Mobile", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json() as Promise<any[]>;
+    },
+    refetchInterval: 5_000,
+    staleTime: 0,
+  });
+  // فقط طلبات "شراء كود مباشر"
+  const orders = rawOrders.filter((o: any) => o.targetInfo?.trim() === "كود مباشر");
+
+  if (isLoading || orders.length === 0) return null;
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+        <span className="text-sm font-bold text-violet-900">🛒 طلبات أكواد ببجي ({orders.length})</span>
+      </div>
+      <div className="space-y-2">
+        {orders.map((o: any) => (
+          <div key={o.id} className="rounded-xl bg-white border border-violet-100 p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="font-bold text-violet-900 text-sm">{o.productName}</div>
+                <div className="text-[10px] text-muted-foreground">@{o.username ?? "—"} • طلب #{o.id}</div>
+                {o.deliveredCode && (
+                  <div className="mt-1 font-mono text-xs text-emerald-700 bg-emerald-50 rounded px-2 py-0.5">
+                    ✅ {o.deliveredCode}
+                  </div>
+                )}
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                o.status === "completed" ? "bg-emerald-100 text-emerald-700" :
+                o.status === "pending" ? "bg-amber-100 text-amber-700" :
+                "bg-rose-100 text-rose-700"
+              }`}>
+                {o.status === "completed" ? "✅ تم" : o.status === "pending" ? "⏳ انتظار" : o.status}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

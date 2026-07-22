@@ -159,7 +159,7 @@ router.post("/orders", requireUser, async (req, res) => {
 
     // ── أكواد مباشرة: أسنِد كوداً فورياً فقط عند شراء كود (targetInfo === "كود مباشر")
     //    الشحن المباشر (targetInfo = اسم اللاعب|ID) لا يخصم أي كود أبداً ──
-    if (product.category === "ff-direct-code" && targetInfo?.trim() === "كود مباشر") {
+    if ((product.category === "ff-direct-code" || product.category === "pubg-direct-code") && targetInfo?.trim() === "كود مباشر") {
       try {
         const codeRows = await db
           .select()

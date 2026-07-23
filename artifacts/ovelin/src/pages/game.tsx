@@ -196,7 +196,10 @@ export default function Game() {
   const qc = useQueryClient();
 
   const isSocial = info?.category === "social_followers";
-  const isFreeFire = slug === "free-fire";
+  // PUBG uses the same legacy game storefront as Free Fire.  Keeping one
+  // storefront here prevents the older standalone PUBG page from drifting
+  // away from the prices, checkout, and direct-code behavior.
+  const isFreeFire = slug === "free-fire" || slug === "pubg";
   const isPubg = slug === "pubg";
   const isSubscription = info?.category === "app_subscriptions";
 
@@ -398,7 +401,10 @@ export default function Game() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, targetInfo: `${playerName.trim()} | ${playerId.trim()}` }),
+        body: JSON.stringify({
+          productId,
+          targetInfo: isPubg ? playerId.trim() : `${playerName.trim()} | ${playerId.trim()}`,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "فشل الطلب");
@@ -423,9 +429,9 @@ export default function Game() {
 
   // ===== FREE FIRE: fetch direct code products =====
   const { data: ffCodeProducts = [] } = useQuery({
-    queryKey: ["ff-code-products"],
+    queryKey: [isPubg ? "pubg-code-products" : "ff-code-products"],
     queryFn: async () => {
-      const res = await fetch("/api/ff-code-products");
+      const res = await fetch(isPubg ? "/api/pubg-code-products" : "/api/ff-code-products");
       if (!res.ok) return [];
       return res.json() as Promise<any[]>;
     },
@@ -450,7 +456,7 @@ export default function Game() {
       setFfCodeBuyDone(order.deliveredCode ?? null);
       setFfCodeBuyError(null);
       qc.invalidateQueries({ queryKey: getGetMyDashboardQueryKey() });
-      qc.invalidateQueries({ queryKey: ["ff-code-products"] });
+      qc.invalidateQueries({ queryKey: [isPubg ? "pubg-code-products" : "ff-code-products"] });
     },
     onError: (err: any) => {
       setFfCodeBuyError(err.message ?? "فشل الطلب، حاول مرة أخرى");
@@ -592,6 +598,10 @@ export default function Game() {
         return d === selectedDiamonds && p.available > 0;
       }) ?? null
     : null;
+  const gameAmounts = isPubg ? PUBG_UC_AMOUNTS : FF_DIAMONDS;
+  const gameUnitLabel = isPubg ? "UC" : "جوهرة";
+  const gameName = isPubg ? "PUBG MOBILE" : "FREE FIRE";
+  const gameSubtitle = isPubg ? "اشحن UC الآن" : "اشحن جواهرك الآن";
 
   return (
     <AppLayout>
@@ -1026,7 +1036,7 @@ export default function Game() {
       {/* ===== GAME CARDS: PACKAGES LIST ===== */}
       {!isSocial && !isSubscription && (
         <div className={`${isFreeFire || isPubg ? "min-h-screen" : "px-4 py-5 min-h-[60vh]"}`}>
-          {isPubg ? (
+          {false ? (
             <div dir="rtl" className="-mx-0 -my-0">
               {/* ── Hero ── */}
               <motion.div
@@ -1204,10 +1214,10 @@ export default function Game() {
                     >
                       <div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-red-200 bg-white">
                         <span className="font-bold text-gray-800 text-sm">
-                          💎 {parseInt((pubgSelected.quantity ?? pubgSelected.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} UC
+                          💎 {parseInt((pubgSelected!.quantity ?? pubgSelected!.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} UC
                         </span>
                         <span className="font-black text-red-600 text-lg">
-                          {formatSDG(Number(pubgSelected.price))} ج.س
+                          {formatSDG(Number(pubgSelected!.price))} ج.س
                         </span>
                       </div>
                     </motion.div>
@@ -1263,7 +1273,7 @@ export default function Game() {
                       <div className="text-white/70 text-[10px] font-semibold mb-1 tracking-wide uppercase">الإجمالي</div>
                       <div className="text-white font-black text-2xl leading-none tabular-nums"
                         style={{ textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
-                        {pubgSelected ? formatSDG(Number(pubgSelected.price)) : "0.00"}
+                        {pubgSelected ? formatSDG(Number(pubgSelected!.price)) : "0.00"}
                         <span className="text-sm font-bold mr-1">ج.س</span>
                       </div>
                     </div>
@@ -1328,10 +1338,10 @@ export default function Game() {
                     <div>
                       <div className="bg-red-50 rounded-2xl p-3 mb-4 flex items-center justify-between">
                         <span className="font-bold text-gray-700 text-sm">
-                          {parseInt((pubgSelected.quantity ?? pubgSelected.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} UC
+                          {parseInt((pubgSelected!.quantity ?? pubgSelected!.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} UC
                         </span>
                         <span className="font-black text-red-600">
-                          {Number(pubgSelected.price).toFixed(0)} ج.س
+                          {Number(pubgSelected!.price).toFixed(0)} ج.س
                         </span>
                       </div>
                       {pubgOrderDone ? (
@@ -1368,7 +1378,7 @@ export default function Game() {
                               }
                               setPubgBuyError(null);
                               pubgBuyMutation.mutate({
-                                productId: pubgSelected.id,
+                                productId: pubgSelected!.id,
                                 playerId: pubgPlayerId,
                               });
                             }}
@@ -1377,7 +1387,7 @@ export default function Game() {
                             style={{ background: "linear-gradient(135deg, #db2777, #e11d48, #be185d)" }}
                           >
                             {pubgBuyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                            {pubgBuyMutation.isPending ? "جارٍ الشراء..." : `شراء — ${Number(pubgSelected.price).toFixed(0)} ج.س`}
+                            {pubgBuyMutation.isPending ? "جارٍ الشراء..." : `شراء — ${Number(pubgSelected!.price).toFixed(0)} ج.س`}
                           </button>
                         </>
                       )}
@@ -1414,8 +1424,8 @@ export default function Game() {
 
                 {/* Background image */}
                 <img
-                  src="/games/free-fire.webp"
-                  alt="Free Fire"
+                  src={isPubg ? "/games/pubg.jpg" : "/games/free-fire.webp"}
+                  alt={isPubg ? "PUBG Mobile" : "Free Fire"}
                   className="absolute inset-0 w-full h-full object-cover"
                   style={{ objectPosition: "center top" }}
                 />
@@ -1467,10 +1477,10 @@ export default function Game() {
                     style={{ background: "rgba(255,255,255,0.10)", backdropFilter: "blur(14px)", border: "1px solid rgba(255,255,255,0.22)", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
                     <p className="text-white font-black text-4xl leading-none tracking-widest"
                       style={{ textShadow: "0 0 24px rgba(255,120,0,0.7), 0 2px 10px rgba(0,0,0,0.6)" }}>
-                      FREE FIRE
+                      {gameName}
                     </p>
                     <div className="mt-2 h-px mx-2" style={{ background: "linear-gradient(90deg, transparent, rgba(255,165,0,0.8), transparent)" }} />
-                    <p className="text-white/85 text-sm mt-2 font-semibold tracking-wide">اشحن جواهرك الآن</p>
+                    <p className="text-white/85 text-sm mt-2 font-semibold tracking-wide">{gameSubtitle}</p>
                   </div>
                 </div>
               </motion.div>
@@ -1507,22 +1517,22 @@ export default function Game() {
                   <div className="flex-1 h-px bg-gradient-to-r from-pink-300 to-transparent" />
                 </div>
 
-                {/* Packages Grid — 5 small squares */}
+                {/* Packages Grid — same legacy storefront layout for both games */}
                 {isLoading ? (
-                  <div className="grid grid-cols-5 gap-2">
-                    {FF_DIAMONDS.map((d) => (
+                  <div className={`grid ${gameAmounts.length > 5 ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-5"} gap-2`}>
+                    {gameAmounts.map((d) => (
                       <div key={d} className="rounded-2xl aspect-square animate-pulse bg-red-50" />
                     ))}
                   </div>
                 ) : (() => {
-                  const ffPackages = FF_DIAMONDS.map((diamonds) => {
+                  const ffPackages = gameAmounts.map((diamonds) => {
                     const product = products.find((p) =>
                       parseInt((p.quantity ?? p.name).replace(/[^\d]/g, "")) === diamonds
                     );
                     return { diamonds, product: product ?? null };
                   });
                   return (
-                    <div className="grid grid-cols-5 gap-2">
+                    <div className={`grid ${gameAmounts.length > 5 ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-5"} gap-2`}>
                       {ffPackages.map(({ diamonds, product }) => {
                         const price = product ? Number(product.price) : 0;
                         const fakePrice = price > 0 ? price + 100 : 0;
@@ -1562,6 +1572,9 @@ export default function Game() {
                             <span className={`font-black text-xs leading-none ${isSelected ? "text-red-600" : "text-gray-800"}`}>
                               {diamonds.toLocaleString("en-US")}
                             </span>
+                            <span className="text-[9px] text-gray-400 font-bold leading-none mt-0.5">
+                              {gameUnitLabel}
+                            </span>
                             {price > 0 && (
                               <div className="flex flex-col items-center mt-1 gap-0">
                                 <span className="text-[8px] text-gray-400 font-semibold leading-none line-through">
@@ -1579,7 +1592,7 @@ export default function Game() {
                   );
                 })()}
 
-                {/* Gem info row — only when package selected */}
+                {/* Package info row — only when package selected */}
                 <AnimatePresence>
                   {ffSelected && (
                     <motion.div
@@ -1590,7 +1603,7 @@ export default function Game() {
                     >
                       <div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-red-200 bg-white">
                         <span className="font-bold text-gray-800 text-sm">
-                          💎 {parseInt((ffSelected.quantity ?? ffSelected.name).replace(/[^\d]/g, ""))} جوهرة
+                          💎 {parseInt((ffSelected.quantity ?? ffSelected.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} {gameUnitLabel}
                         </span>
                         <span className="font-black text-red-600 text-lg">
                           {formatSDG(Number(ffSelected.price))} ج.س
@@ -1620,9 +1633,9 @@ export default function Game() {
                   {/* Steps */}
                   {[
                     "اختر الباقة المناسبة",
-                    "أدخل اسمك وID حسابك في فري فاير",
+                    isPubg ? "أدخل Player ID الخاص بحسابك" : "أدخل اسمك وID حسابك في فري فاير",
                     "أكّد الطلب من محفظتك",
-                    "ستصلك الجواهر خلال دقائق ✅",
+                    isPubg ? "ستصلك الشدات خلال دقائق ✅" : "ستصلك الجواهر خلال دقائق ✅",
                   ].map((step, i) => (
                     <div key={i}>
                       <div className="flex items-center gap-3 px-4 py-3">
@@ -1731,14 +1744,14 @@ export default function Game() {
                 <DialogContent dir="rtl" className="max-w-sm rounded-3xl p-6">
                   <DialogHeader>
                     <DialogTitle className="text-right font-black text-gray-800 mb-1">
-                      💎 أدخل بيانات حسابك
+                      💎 {isPubg ? "أدخل Player ID" : "أدخل بيانات حسابك"}
                     </DialogTitle>
                   </DialogHeader>
                   {ffSelected && (
                     <div>
                       <div className="bg-red-50 rounded-2xl p-3 mb-4 flex items-center justify-between">
                         <span className="font-bold text-gray-700 text-sm">
-                          {parseInt((ffSelected.quantity ?? ffSelected.name).replace(/[^\d]/g, ""))} جوهرة
+                          {parseInt((ffSelected.quantity ?? ffSelected.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} {gameUnitLabel}
                         </span>
                         <span className="font-black text-red-600">
                           {Number(ffSelected.price).toFixed(0)} ج.س
@@ -1748,12 +1761,14 @@ export default function Game() {
                         <div className="text-center py-4">
                           <div className="text-4xl mb-3">✅</div>
                           <p className="font-black text-green-700 text-base">تم الطلب بنجاح!</p>
-                          <p className="text-gray-500 text-xs mt-1">ستصلك الجواهر خلال دقائق</p>
+                          <p className="text-gray-500 text-xs mt-1">
+                            {isPubg ? "ستصلك الشدات خلال دقائق" : "ستصلك الجواهر خلال دقائق"}
+                          </p>
                         </div>
                       ) : (
                         <>
                           <div className="space-y-3">
-                            <div>
+                            {!isPubg && <div>
                               <label className="text-xs font-bold text-gray-700 mb-1 block">اسم اللاعب</label>
                               <input
                                 type="text"
@@ -1763,7 +1778,7 @@ export default function Game() {
                                 className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-pink-400 focus:ring-1 focus:ring-pink-300"
                                 dir="rtl"
                               />
-                            </div>
+                            </div>}
                             <div>
                               <label className="text-xs font-bold text-gray-700 mb-1 block">الايدي (Player ID)</label>
                               <input
@@ -1783,8 +1798,8 @@ export default function Game() {
                           )}
                           <button
                             onClick={() => {
-                              if (!ffPlayerName.trim() || !ffPlayerId.trim()) {
-                                setFfBuyError("أدخل اسم اللاعب والايدي أولاً");
+                              if (!ffPlayerId.trim() || (!isPubg && !ffPlayerName.trim())) {
+                                setFfBuyError(isPubg ? "أدخل Player ID أولاً" : "أدخل اسم اللاعب والايدي أولاً");
                                 return;
                               }
                               setFfBuyError(null);
@@ -1816,7 +1831,7 @@ export default function Game() {
                 <DialogContent dir="rtl" className="max-w-sm rounded-3xl p-6">
                   <DialogHeader>
                     <DialogTitle className="text-right font-black text-gray-800 mb-1">
-                      شراء كود فري فاير مباشر
+                      شراء كود {isPubg ? "PUBG" : "فري فاير"} مباشر
                     </DialogTitle>
                   </DialogHeader>
                   {ffCodeBuyDone ? (

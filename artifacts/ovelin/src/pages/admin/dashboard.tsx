@@ -1244,6 +1244,7 @@ function PubgCodesTab() {
   const [newQty, setNewQty] = useState("");
   const [adding, setAdding] = useState(false);
   const [viewCodes, setViewCodes] = useState<number | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const { data: products = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-pubg-code-products"],
@@ -1320,17 +1321,25 @@ function PubgCodesTab() {
   async function addCodes(productId: number) {
     if (!codesText.trim()) return;
     setSaving(true);
+    setSaveMessage(null);
     try {
-      await fetch(`/api/admin/products/${productId}/codes`, {
+      const res = await fetch(`/api/admin/products/${productId}/codes`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ codes: codesText }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "تعذر حفظ الأكواد");
       setCodesText(""); setAddingCodes(null);
-      refetch();
-      qc.invalidateQueries({ queryKey: ["admin-pubg-codes-list", productId] });
-    } finally { setSaving(false); }
+      await refetch();
+      await qc.invalidateQueries({ queryKey: ["admin-pubg-codes-list", productId] });
+      setSaveMessage(`تم حفظ ${data.added ?? "الأكواد"} بنجاح`);
+    } catch (err: any) {
+      setSaveMessage(err?.message ?? "تعذر حفظ الأكواد");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deleteCode(codeId: number) {
@@ -1469,16 +1478,22 @@ function PubgCodesTab() {
                   className="w-full px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400 font-mono text-xs resize-none"
                   dir="ltr"
                 />
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-2 items-center">
                   <button
                     onClick={() => addCodes(p.id)}
                     disabled={saving || !codesText.trim()}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50"
+                    className="min-w-[130px] px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center"
+                    title="حفظ أكواد PUBG"
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ الأكواد"}
                   </button>
                   <button onClick={() => setAddingCodes(null)} className="px-3 py-2 rounded-xl bg-zinc-100 text-zinc-700 text-sm">إلغاء</button>
                 </div>
+                {saveMessage && (
+                  <p className={`mt-2 text-xs font-bold ${saveMessage.startsWith("تم") ? "text-emerald-700" : "text-red-600"}`}>
+                    {saveMessage}
+                  </p>
+                )}
               </div>
             )}
 

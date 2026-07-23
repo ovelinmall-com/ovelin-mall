@@ -48,7 +48,7 @@ function ImageUploader({
   onChange,
 }: {
   images: UploadedImage[];
-  onChange: (imgs: UploadedImage[]) => void;
+  onChange: React.Dispatch<React.SetStateAction<UploadedImage[]>>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 

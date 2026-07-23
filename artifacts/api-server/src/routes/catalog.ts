@@ -181,7 +181,7 @@ router.get("/pubg-code-products", async (_req, res) => {
     const counts = await db
       .select({
         productId: productCodesTable.productId,
-        available: sql<number>\`count(*)::int\`,
+        available: sql<number>`count(*)::int`,
       })
       .from(productCodesTable)
       .where(eq(productCodesTable.status, "available"))

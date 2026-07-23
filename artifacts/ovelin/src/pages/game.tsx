@@ -601,7 +601,7 @@ export default function Game() {
   const gameAmounts = isPubg ? PUBG_UC_AMOUNTS : FF_DIAMONDS;
   const gameUnitLabel = isPubg ? "UC" : "جوهرة";
   const gameName = isPubg ? "PUBG MOBILE" : "FREE FIRE";
-  const gameSubtitle = isPubg ? "اشحن UC الآن" : "اشحن جواهرك الآن";
+  const gameSubtitle = isPubg ? "اشحن الآن" : "اشحن جواهرك الآن";
 
   return (
     <AppLayout>
@@ -1103,7 +1103,7 @@ export default function Game() {
                       PUBG MOBILE
                     </p>
                     <div className="mt-2 h-px mx-2" style={{ background: "linear-gradient(90deg, transparent, rgba(255,165,0,0.8), transparent)" }} />
-                    <p className="text-white/85 text-sm mt-2 font-semibold tracking-wide">اشحن UC الآن</p>
+                    <p className="text-white/85 text-sm mt-2 font-semibold tracking-wide">اشحن الآن</p>
                   </div>
                 </div>
               </motion.div>
@@ -1133,9 +1133,9 @@ export default function Game() {
                   <div className="flex-1 h-px bg-gradient-to-r from-pink-300 to-transparent" />
                 </div>
 
-                {/* UC Grid */}
+                {/* Package grid — same compact card sizing as Free Fire */}
                 {isLoading ? (
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                     {PUBG_UC_AMOUNTS.map((uc) => (
                       <div key={uc} className="rounded-2xl aspect-square animate-pulse bg-red-50" />
                     ))}
@@ -1148,7 +1148,7 @@ export default function Game() {
                     return { uc, product: product ?? null };
                   });
                   return (
-                    <div className="grid grid-cols-5 gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                       {pubgPackages.map(({ uc, product }) => {
                         const price = product ? Number(product.price) : 0;
                         const fakePrice = price > 0 ? price + 100 : 0;
@@ -1185,7 +1185,6 @@ export default function Game() {
                             <span className={`font-black text-xs leading-none ${isSelected ? "text-red-600" : "text-gray-800"}`}>
                               {uc >= 1000 ? (uc / 1000).toFixed(uc % 1000 === 0 ? 0 : 1) + "K" : uc}
                             </span>
-                            <span className={`text-[9px] font-bold leading-none mt-0.5 ${isSelected ? "text-red-400" : "text-gray-400"}`}>UC</span>
                             {price > 0 && (
                               <div className="flex flex-col items-center mt-1 gap-0">
                                 <span className="text-[8px] text-gray-400 font-semibold leading-none line-through">
@@ -1203,7 +1202,7 @@ export default function Game() {
                   );
                 })()}
 
-                {/* UC info row */}
+                {/* Selected package info */}
                 <AnimatePresence>
                   {pubgSelected && (
                     <motion.div
@@ -1214,7 +1213,7 @@ export default function Game() {
                     >
                       <div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-red-200 bg-white">
                         <span className="font-bold text-gray-800 text-sm">
-                          💎 {parseInt((pubgSelected!.quantity ?? pubgSelected!.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} UC
+                          💎 {parseInt((pubgSelected!.quantity ?? pubgSelected!.name).replace(/[^\d]/g, "")).toLocaleString("en-US")}
                         </span>
                         <span className="font-black text-red-600 text-lg">
                           {formatSDG(Number(pubgSelected!.price))} ج.س
@@ -1244,7 +1243,7 @@ export default function Game() {
                     "اختر الباقة المناسبة",
                     "أدخل ID حسابك في PUBG Mobile",
                     "أكّد الطلب من محفظتك",
-                    "ستصلك الـ UC خلال دقائق ✅",
+                    "ستصلك الشدات خلال دقائق ✅",
                   ].map((step, i) => (
                     <div key={i}>
                       <div className="flex items-center gap-3 px-4 py-3">
@@ -1338,7 +1337,7 @@ export default function Game() {
                     <div>
                       <div className="bg-red-50 rounded-2xl p-3 mb-4 flex items-center justify-between">
                         <span className="font-bold text-gray-700 text-sm">
-                          {parseInt((pubgSelected!.quantity ?? pubgSelected!.name).replace(/[^\d]/g, "")).toLocaleString("en-US")} UC
+                          {parseInt((pubgSelected!.quantity ?? pubgSelected!.name).replace(/[^\d]/g, "")).toLocaleString("en-US")}
                         </span>
                         <span className="font-black text-red-600">
                           {Number(pubgSelected!.price).toFixed(0)} ج.س
@@ -1348,7 +1347,7 @@ export default function Game() {
                         <div className="text-center py-4">
                           <div className="text-4xl mb-3">✅</div>
                           <p className="font-black text-green-700 text-base">تم الطلب بنجاح!</p>
-                          <p className="text-gray-500 text-xs mt-1">ستصلك الـ UC خلال دقائق</p>
+                          <p className="text-gray-500 text-xs mt-1">ستصلك الشدات خلال دقائق</p>
                         </div>
                       ) : (
                         <>

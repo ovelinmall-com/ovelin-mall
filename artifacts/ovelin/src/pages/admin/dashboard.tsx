@@ -1371,25 +1371,25 @@ function PubgCodesTab() {
             onChange={e => setNewName(e.target.value)}
             className="w-full px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400"
           />
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="number"
               placeholder="السعر"
               value={newPrice}
               onChange={e => setNewPrice(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400"
+              className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400"
             />
             <input
               type="number"
               placeholder="عدد UC (مثال: 60) — مطلوب للمطابقة"
               value={newQty}
               onChange={e => setNewQty(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400"
+              className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-amber-200 text-sm outline-none focus:border-amber-400"
             />
             <button
               onClick={createProduct}
               disabled={saving || !newName.trim() || !newPrice}
-              className="px-5 py-2 rounded-xl bg-amber-600 text-white text-sm font-bold disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
+              className="w-full sm:w-auto px-5 py-2 rounded-xl bg-amber-600 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-1.5 whitespace-nowrap"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "➕ إضافة"}
             </button>
@@ -1417,18 +1417,18 @@ function PubgCodesTab() {
                       className="w-full px-2 py-1.5 rounded-lg border border-amber-300 text-sm outline-none focus:border-amber-500"
                       placeholder="اسم المنتج"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         type="number"
                         value={editPrice}
                         onChange={e => setEditPrice(e.target.value)}
-                        className="flex-1 px-2 py-1.5 rounded-lg border border-amber-300 text-sm outline-none focus:border-amber-500"
+                        className="min-w-0 flex-1 px-2 py-1.5 rounded-lg border border-amber-300 text-sm outline-none focus:border-amber-500"
                         placeholder="السعر"
                       />
-                      <button onClick={() => saveEdit(p.id)} disabled={saving} className="px-4 py-1.5 bg-emerald-600 text-white text-xs rounded-lg font-bold disabled:opacity-50 whitespace-nowrap">
+                      <button onClick={() => saveEdit(p.id)} disabled={saving} className="w-full sm:w-auto px-4 py-1.5 bg-emerald-600 text-white text-xs rounded-lg font-bold disabled:opacity-50 whitespace-nowrap">
                         {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "✅ حفظ"}
                       </button>
-                      <button onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-zinc-100 text-zinc-700 text-xs rounded-lg whitespace-nowrap">إلغاء</button>
+                      <button onClick={() => setEditingId(null)} className="w-full sm:w-auto px-3 py-1.5 bg-zinc-100 text-zinc-700 text-xs rounded-lg whitespace-nowrap">إلغاء</button>
                     </div>
                   </div>
                 ) : (

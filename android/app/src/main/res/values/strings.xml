@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ovelin Mall</string>
+    <string name="no_connection">لا يوجد اتصال بالإنترنت</string>
+    <string name="swipe_to_retry">اسحب للأسفل للمحاولة مرة أخرى</string>
+</resources>

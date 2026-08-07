@@ -78,6 +78,34 @@ class MainActivity : AppCompatActivity() {
                             if (typeof callback === 'function') callback(pid);
                         } catch(e) {}
                     },
+                    onesignalInfo: function(options) {
+                        var callbackName = options && options.callback;
+                        var attempts = 0;
+                        var deliver = function() {
+                            try {
+                                var subscriptionId = OvelinBridge.getOneSignalPlayerId();
+                                var userId = OvelinBridge.getOneSignalUserId();
+                                var pushToken = OvelinBridge.getOneSignalPushToken();
+                                var info = {
+                                    playerId: subscriptionId,
+                                    subscriptionId: subscriptionId,
+                                    onesignalId: userId,
+                                    pushToken: pushToken
+                                };
+                                if (callbackName && typeof window[callbackName] === 'function') {
+                                    window[callbackName](info);
+                                }
+                                // OneSignal initializes asynchronously. Keep checking
+                                // so the web app cannot miss the first subscription.
+                                if (!subscriptionId && attempts++ < 24) {
+                                    setTimeout(deliver, 500);
+                                }
+                            } catch(e) {
+                                if (attempts++ < 24) setTimeout(deliver, 500);
+                            }
+                        };
+                        deliver();
+                    },
                     getTags: function(callback) {
                         if (typeof callback === 'function') callback({});
                     },
@@ -88,8 +116,13 @@ class MainActivity : AppCompatActivity() {
                 registration: {
                     getRegistrationId: function(callback) {
                         try {
-                            var pid = OvelinBridge.getOneSignalPlayerId();
-                            if (typeof callback === 'function') callback({ oneSignalUserId: pid });
+                            var subscriptionId = OvelinBridge.getOneSignalPlayerId();
+                            var userId = OvelinBridge.getOneSignalUserId();
+                            if (typeof callback === 'function') callback({
+                                oneSignalUserId: userId,
+                                subscriptionId: subscriptionId,
+                                playerId: subscriptionId
+                            });
                         } catch(e) {}
                     }
                 },
@@ -266,7 +299,16 @@ class MainActivity : AppCompatActivity() {
 
     inner class OvelinBridgeInterface {
         @JavascriptInterface
-        fun getOneSignalPlayerId(): String = OneSignal.User.onesignalId ?: ""
+        fun getOneSignalPlayerId(): String =
+            OneSignal.User.pushSubscription.id ?: ""
+
+        @JavascriptInterface
+        fun getOneSignalUserId(): String =
+            OneSignal.User.onesignalId ?: ""
+
+        @JavascriptInterface
+        fun getOneSignalPushToken(): String =
+            OneSignal.User.pushSubscription.token ?: ""
 
         @JavascriptInterface
         fun oneSignalLogin(externalId: String) {

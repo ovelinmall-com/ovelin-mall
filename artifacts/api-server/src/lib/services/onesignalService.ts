@@ -107,17 +107,20 @@ export async function isOnesignalReady(): Promise<boolean> {
 }
 
 export async function sendOnesignalToPlayers(
-  playerIds: string[],
+  subscriptionIds: string[],
   payload: OnesignalPayload,
 ): Promise<{ sent: number; failed: number }> {
-  if (!playerIds.length) return { sent: 0, failed: 0 };
+  if (!subscriptionIds.length) return { sent: 0, failed: 0 };
   const cfg = await getOnesignalConfig();
   if (!cfg) return { sent: 0, failed: 0 };
 
   try {
     const body = {
       ...buildNotificationFields(payload, cfg.appId, cfg.siteUrl),
-      include_player_ids: playerIds,
+      // OneSignal SDK v5 returns a subscription ID. The old
+      // include_player_ids field only accepts legacy player IDs and
+      // rejects SDK v5 subscriptions even when they are registered.
+      include_subscription_ids: subscriptionIds,
     };
 
     const res = await fetch("https://onesignal.com/api/v1/notifications", {
@@ -132,40 +135,51 @@ export async function sendOnesignalToPlayers(
     if (!res.ok) {
       const text = await res.text();
       logger.warn({ status: res.status, text }, "OneSignal API error");
-      return { sent: 0, failed: playerIds.length };
+      return { sent: 0, failed: subscriptionIds.length };
     }
 
     const data: any = await res.json();
 
-    // OneSignal POST response may omit "recipients" (returns just {id, external_id}).
-    // If the request succeeded and no errors, treat all playerIds as queued.
-    const invalidPlayerIds: string[] = data.errors?.invalid_player_ids ?? [];
+    // OneSignal POST response may omit "recipients" (returns just {id}).
+    // If the request succeeded and no errors, treat all subscriptions as queued.
+    const invalidSubscriptionIds: string[] =
+      data.errors?.invalid_subscription_ids ??
+      data.errors?.invalid_player_ids ??
+      [];
     const hasErrors = Array.isArray(data.errors) && data.errors.length > 0 && typeof data.errors[0] === "string";
 
     const sent = hasErrors
       ? 0
       : data.recipients != null
         ? data.recipients
-        : playerIds.length - invalidPlayerIds.length;
-    const failed = playerIds.length - sent;
+        : subscriptionIds.length - invalidSubscriptionIds.length;
+    const failed = subscriptionIds.length - sent;
 
-    // احذف player_ids غير الصالحة التي يُعيدها OneSignal في حقل errors
-    if (invalidPlayerIds.length > 0) {
-      logger.info({ invalidPlayerIds }, "OneSignal: player_ids غير صالحة — سيُحذفون من DB");
-      for (const pid of invalidPlayerIds) {
+    // احذف معرّفات الاشتراك غير الصالحة التي يُعيدها OneSignal في حقل errors
+    if (invalidSubscriptionIds.length > 0) {
+      logger.info(
+        { invalidSubscriptionIds },
+        "OneSignal: subscription IDs غير صالحة — سيُحذفون من DB",
+      );
+      for (const subscriptionId of invalidSubscriptionIds) {
         try {
-          await db.delete(onesignalPlayersTable).where(eq(onesignalPlayersTable.playerId, pid));
+          await db
+            .delete(onesignalPlayersTable)
+            .where(eq(onesignalPlayersTable.playerId, subscriptionId));
         } catch (delErr) {
-          logger.warn({ delErr, pid }, "فشل حذف OneSignal player_id من DB");
+          logger.warn({ delErr, subscriptionId }, "فشل حذف OneSignal subscription ID من DB");
         }
       }
     }
 
-    logger.info({ notificationId: data.id, sent, failed, cleaned: invalidPlayerIds.length }, "تم إرسال OneSignal notifications");
+    logger.info(
+      { notificationId: data.id, sent, failed, cleaned: invalidSubscriptionIds.length },
+      "تم إرسال OneSignal notifications",
+    );
     return { sent, failed };
   } catch (err) {
     logger.error({ err }, "خطأ في إرسال OneSignal notification");
-    return { sent: 0, failed: playerIds.length };
+    return { sent: 0, failed: subscriptionIds.length };
   }
 }
 
@@ -178,9 +192,9 @@ export async function sendOnesignalToUser(
     .from(onesignalPlayersTable)
     .where(eq(onesignalPlayersTable.userId, userId));
 
-  const playerIds = rows.map((r) => r.playerId);
-  if (!playerIds.length) return { sent: 0, failed: 0 };
-  return sendOnesignalToPlayers(playerIds, payload);
+  const subscriptionIds = rows.map((r) => r.playerId);
+  if (!subscriptionIds.length) return { sent: 0, failed: 0 };
+  return sendOnesignalToPlayers(subscriptionIds, payload);
 }
 
 /**

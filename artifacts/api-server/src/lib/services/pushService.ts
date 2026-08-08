@@ -26,7 +26,12 @@ import { db, settingsTable, pushSubscriptionsTable, fcmTokensTable, onesignalPla
 import { eq } from "drizzle-orm";
 import { logger } from "../logger";
 import { sendFcmToTokens, isFcmReady } from "./fcmService";
-import { sendOnesignalToUser, sendOnesignalToAll } from "./onesignalService";
+import {
+  ADMIN_EXTERNAL_ID,
+  sendOnesignalToExternalUser,
+  sendOnesignalToUser,
+  sendOnesignalToAll,
+} from "./onesignalService";
 export { sendOnesignalToAll };
 
 let initialized = false;
@@ -82,69 +87,19 @@ export type PushPayload = {
 };
 
 /**
- * أرسل إشعار للأدمن عبر OneSignal + FCM + VAPID
- * يبحث عنه أولاً بالإيميل (OWNER_EMAIL)، وإن لم يجده بـ username = "admin"
+ * أرسل إشعار الأدمن إلى OneSignal External ID ثابت = "1".
+ * لا تستخدم هذه الدالة email أو username أو رقم مستخدم بديل حتى لا
+ * يصل إشعار إداري إلى حساب آخر.
  */
 export async function sendPushToAdmin(payload: PushPayload): Promise<void> {
-  if (!initialized) await initPush();
   const startMs = Date.now();
   try {
-    const { OWNER_EMAIL } = await import("../auth");
-    const { usersTable: ut } = await import("@workspace/db");
-    const { eq: eqFn, or: orFn, sql: sqlFn } = await import("drizzle-orm");
-
-    // ── Step 1: جلب حساب الأدمن ────────────────────────────────────
-    // ORDER BY يضمن أن "skandar" (الأدمن الحقيقي) يُعاد أولاً حتى لو وُجد حساب "admin" آخر
-    const adminRows = await db
-      .select({ id: ut.id, username: ut.username, email: ut.email })
-      .from(ut)
-      .where(orFn(eqFn(ut.email, OWNER_EMAIL), eqFn(ut.username, "skandar"), eqFn(ut.username, "admin")))
-      .orderBy(sqlFn`CASE WHEN ${ut.email} = ${OWNER_EMAIL} THEN 0 WHEN ${ut.username} = 'skandar' THEN 1 ELSE 2 END`)
-      .limit(1);
-
-    const admin = adminRows[0];
-    if (!admin) {
-      logger.error({ OWNER_EMAIL }, "[Admin Push] ❌ لم يُعثر على حساب الأدمن في DB");
-      return;
-    }
-    logger.info({ adminId: admin.id, adminUsername: admin.username, title: payload.title },
-      "[Admin Push] ✅ Step1: تم العثور على حساب الأدمن");
-
-    // ── Step 2: جلب player_ids (OneSignal) ──────────────────────────
-    const osRows = await db
-      .select({ playerId: onesignalPlayersTable.playerId })
-      .from(onesignalPlayersTable)
-      .where(eq(onesignalPlayersTable.userId, admin.id));
-    logger.info({ adminId: admin.id, playerIdCount: osRows.length, playerIds: osRows.map(r => r.playerId.slice(0, 8) + "…") },
-      "[Admin Push] Step2: OneSignal player_ids في DB");
-
-    // ── Step 3: جلب FCM tokens ──────────────────────────────────────
-    const fcmRows = await db
-      .select({ token: fcmTokensTable.token })
-      .from(fcmTokensTable)
-      .where(eq(fcmTokensTable.userId, admin.id));
-    logger.info({ adminId: admin.id, fcmTokenCount: fcmRows.length },
-      "[Admin Push] Step3: FCM tokens في DB");
-
-    // ── Step 4: جلب VAPID subscriptions ─────────────────────────────
-    const { pushSubscriptionsTable: pst } = await import("@workspace/db");
-    const vapidRows = await db
-      .select({ endpoint: pst.endpoint })
-      .from(pst)
-      .where(eq(pst.userId, admin.id));
-    logger.info({ adminId: admin.id, vapidCount: vapidRows.length },
-      "[Admin Push] Step4: VAPID subscriptions في DB");
-
-    // ── Step 5: إرسال الإشعار — قناة واحدة فقط لمنع التكرار ────────
-    // sendPushToUser تتولى كل شيء: player_ids → external_id fallback → FCM fallback
-    logger.info({ adminId: admin.id, playerIdCount: osRows.length },
-      "[Admin Push] Step5: إرسال عبر sendPushToUser (قناة موحّدة)…");
-    const result = await sendPushToUser(admin.id, payload);
-    logger.info({ adminId: admin.id, result },
-      "[Admin Push] Step5 نتيجة");
+    logger.info({ externalId: ADMIN_EXTERNAL_ID, title: payload.title },
+      "[Admin Push] إرسال إلى OneSignal External ID");
+    const result = await sendOnesignalToExternalUser(ADMIN_EXTERNAL_ID, payload);
 
     const elapsed = Date.now() - startMs;
-    logger.info({ adminId: admin.id, elapsed, title: payload.title },
+    logger.info({ externalId: ADMIN_EXTERNAL_ID, result, elapsed, title: payload.title },
       "[Admin Push] ✅ انتهى إرسال إشعار الأدمن");
 
   } catch (err) {

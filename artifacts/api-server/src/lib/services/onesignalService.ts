@@ -9,6 +9,9 @@ export type OnesignalPayload = {
   tag?: string;
 };
 
+// الحساب الإداري الوحيد المستهدف بإشعارات الأدمن.
+export const ADMIN_EXTERNAL_ID = "1";
+
 async function getOnesignalConfig(): Promise<{ appId: string; restApiKey: string; siteUrl?: string } | null> {
   const rows = await db.select().from(settingsTable);
   const map: Record<string, string> = {};

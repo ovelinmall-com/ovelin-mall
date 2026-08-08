@@ -460,24 +460,10 @@ router.get("/push/debug-status", requireUser, async (req, res) => {
  * ───────────────────────────────────────────────────────────────────────── */
 router.post("/admin/push-test-external", requireUser, async (req, res) => {
   try {
-    const { OWNER_EMAIL } = await import("../lib/auth");
-    const { usersTable: ut } = await import("@workspace/db");
-    const { or, eq: eqFn, sql: sqlFn } = await import("drizzle-orm");
-    const { sendOnesignalToExternalUser } = await import("../lib/services/onesignalService");
-
-    // ابحث عن الأدمن — ORDER BY يضمن إعادة "skandar" أولاً دائماً
-    const adminRows = await db
-      .select({ id: ut.id, username: ut.username })
-      .from(ut)
-      .where(or(eqFn(ut.email, OWNER_EMAIL), eqFn(ut.username, "skandar"), eqFn(ut.username, "admin")))
-      .orderBy(sqlFn`CASE WHEN ${ut.email} = ${OWNER_EMAIL} THEN 0 WHEN ${ut.username} = 'skandar' THEN 1 ELSE 2 END`)
-      .limit(1);
-
-    const admin = adminRows[0];
-    if (!admin) {
-      res.status(404).json({ error: "لم يُعثر على حساب الأدمن" });
-      return;
-    }
+    const {
+      ADMIN_EXTERNAL_ID,
+      sendOnesignalToExternalUser,
+    } = await import("../lib/services/onesignalService");
 
     const started = Date.now();
     const payload = {
@@ -487,18 +473,13 @@ router.post("/admin/push-test-external", requireUser, async (req, res) => {
       tag: "live-test-extid",
     };
 
-    // جرّب بالـ userId
-    const r1 = await sendOnesignalToExternalUser(String(admin.id), payload);
-    // جرّب بالـ username
-    const r2 = await sendOnesignalToExternalUser(admin.username, payload);
+    const result = await sendOnesignalToExternalUser(ADMIN_EXTERNAL_ID, payload);
 
     res.json({
       ok: true,
       elapsed: Date.now() - started,
-      adminId: admin.id,
-      adminUsername: admin.username,
-      byUserId:   r1,
-      byUsername: r2,
+      externalId: ADMIN_EXTERNAL_ID,
+      result,
     });
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "فشل الاختبار" });
@@ -511,34 +492,20 @@ router.post("/admin/push-test-external", requireUser, async (req, res) => {
  * ───────────────────────────────────────────────────────────────────────── */
 router.post("/admin/push-live-test", requireUser, async (req, res) => {
   try {
-    const { sendPushToUser } = await import("../lib/services/pushService");
-    const { usersTable: ut } = await import("@workspace/db");
-    const { or, eq: eqFn, sql: sqlFn } = await import("drizzle-orm");
-    const OWNER_EMAIL = "skandarabdoalatif@gmail.com";
-
-    // ابحث عن الأدمن — ORDER BY يضمن إعادة "skandar" أولاً دائماً
-    const adminRows = await db
-      .select({ id: ut.id, username: ut.username })
-      .from(ut)
-      .where(or(eqFn(ut.email, OWNER_EMAIL), eqFn(ut.username, "skandar"), eqFn(ut.username, "admin")))
-      .orderBy(sqlFn`CASE WHEN ${ut.email} = ${OWNER_EMAIL} THEN 0 WHEN ${ut.username} = 'skandar' THEN 1 ELSE 2 END`)
-      .limit(1);
-
-    const admin = adminRows[0];
-    if (!admin) {
-      res.status(404).json({ error: "لم يُعثر على حساب الأدمن في قاعدة البيانات" });
-      return;
-    }
+    const {
+      ADMIN_EXTERNAL_ID,
+      sendOnesignalToExternalUser,
+    } = await import("../lib/services/onesignalService");
 
     const started = Date.now();
-    const result = await sendPushToUser(admin.id, {
+    const result = await sendOnesignalToExternalUser(ADMIN_EXTERNAL_ID, {
       title: "🧪 اختبار — طلب شحن جديد",
       body:  "محمد — 500.00 ج.س عبر زين كاش (اختبار حقيقي ✅)",
       url:   "/admin",
       tag:   "live-test-deposit",
     });
     const elapsed = Date.now() - started;
-    res.json({ ok: true, elapsed, adminId: admin.id, adminUsername: admin.username, result });
+    res.json({ ok: true, elapsed, externalId: ADMIN_EXTERNAL_ID, result });
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "فشل الاختبار" });
   }

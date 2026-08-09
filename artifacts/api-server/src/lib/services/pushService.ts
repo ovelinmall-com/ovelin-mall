@@ -27,7 +27,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "../logger";
 import { sendFcmToTokens, isFcmReady } from "./fcmService";
 import {
-  ADMIN_EXTERNAL_ID,
+  getAdminExternalId,
   sendOnesignalToExternalUser,
   sendOnesignalToUser,
   sendOnesignalToAll,
@@ -87,19 +87,25 @@ export type PushPayload = {
 };
 
 /**
- * أرسل إشعار الأدمن إلى OneSignal External ID ثابت = "1".
- * لا تستخدم هذه الدالة email أو username أو رقم مستخدم بديل حتى لا
- * يصل إشعار إداري إلى حساب آخر.
+ * أرسل إشعار الأدمن إلى External ID المرتبط بالحساب الإداري.
+ * يُحلّ المعرّف من البريد الإداري في قاعدة البيانات حتى لا يعتمد
+ * الإرسال على رقم مستخدم ثابت قابل للتغيّر.
  */
 export async function sendPushToAdmin(payload: PushPayload): Promise<void> {
   const startMs = Date.now();
   try {
-    logger.info({ externalId: ADMIN_EXTERNAL_ID, title: payload.title },
+    const externalId = await getAdminExternalId();
+    if (!externalId) {
+      logger.warn({ email: "skandarabdoalatif@gmail.com" },
+        "[Admin Push] لم يتم العثور على حساب الأدمن");
+      return;
+    }
+    logger.info({ externalId, title: payload.title },
       "[Admin Push] إرسال إلى OneSignal External ID");
-    const result = await sendOnesignalToExternalUser(ADMIN_EXTERNAL_ID, payload);
+    const result = await sendOnesignalToExternalUser(externalId, payload);
 
     const elapsed = Date.now() - startMs;
-    logger.info({ externalId: ADMIN_EXTERNAL_ID, result, elapsed, title: payload.title },
+    logger.info({ externalId, result, elapsed, title: payload.title },
       "[Admin Push] ✅ انتهى إرسال إشعار الأدمن");
 
   } catch (err) {

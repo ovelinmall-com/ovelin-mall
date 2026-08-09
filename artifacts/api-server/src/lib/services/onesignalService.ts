@@ -1,4 +1,4 @@
-import { db, settingsTable, onesignalPlayersTable } from "@workspace/db";
+import { db, settingsTable, onesignalPlayersTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../logger";
 
@@ -10,7 +10,17 @@ export type OnesignalPayload = {
 };
 
 // الحساب الإداري الوحيد المستهدف بإشعارات الأدمن.
-export const ADMIN_EXTERNAL_ID = "1";
+// نحلّ المعرّف من البريد بدلاً من افتراض أن رقم المستخدم سيظل 1.
+export const ADMIN_EMAIL = "skandarabdoalatif@gmail.com";
+
+export async function getAdminExternalId(): Promise<string | null> {
+  const rows = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, ADMIN_EMAIL))
+    .limit(1);
+  return rows[0] ? String(rows[0].id) : null;
+}
 
 async function getOnesignalConfig(): Promise<{ appId: string; restApiKey: string; siteUrl?: string } | null> {
   const rows = await db.select().from(settingsTable);

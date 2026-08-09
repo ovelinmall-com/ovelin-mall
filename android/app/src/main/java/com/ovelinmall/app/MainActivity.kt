@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private val TARGET_URL = "https://ovelinmall.com/"
     private val ONESIGNAL_APP_ID = "f2c9dd19-71f0-4af3-8a5b-12f34d99e76a"
     private val LOAD_TIMEOUT_MS = 20_000L
+    private val RELOAD_AFTER_BACKGROUND_MS = 5 * 60 * 1000L
     private var pausedAt: Long = 0
     private var pageLoaded = false
     private var mainFrameFailed = false
@@ -143,7 +144,11 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupSwipeRefresh()
 
-        loadFreshSite()
+        if (savedInstanceState == null) {
+            loadFreshSite()
+        } else {
+            binding.webView.restoreState(savedInstanceState)
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -159,9 +164,12 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (pausedAt > 0) {
-            // Always re-check the live website after returning to the app.
-            // Never keep showing an old WebView document when the site is down.
-            loadFreshSite()
+            val backgroundDuration = System.currentTimeMillis() - pausedAt
+            if (backgroundDuration >= RELOAD_AFTER_BACKGROUND_MS) {
+                // A long absence starts a fresh session. Short returns keep the
+                // current WebView route, scroll position, and in-progress form.
+                loadFreshSite(resetNavigation = true)
+            }
         }
         pausedAt = 0
     }
@@ -336,7 +344,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadFreshSite() {
+    private fun loadFreshSite(resetNavigation: Boolean = false) {
         pageLoaded = false
         mainFrameFailed = false
         mainHandler.removeCallbacks(loadTimeout)
@@ -347,14 +355,20 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Remove cached documents and navigation state, while preserving cookies
-        // so a signed-in user is not logged out on every live-site check.
-        binding.webView.clearCache(true)
-        binding.webView.clearHistory()
         binding.noConnectionLayout.visibility = View.GONE
         binding.webView.visibility = View.VISIBLE
         binding.progressBar.visibility = View.VISIBLE
-        binding.webView.loadUrl(TARGET_URL)
+        if (resetNavigation) {
+            // Preserve cookies/session, but intentionally start from the home
+            // page after the five-minute background timeout.
+            binding.webView.clearHistory()
+            binding.webView.loadUrl(TARGET_URL)
+        } else if (binding.webView.url.isNullOrBlank()) {
+            binding.webView.loadUrl(TARGET_URL)
+        } else {
+            // Refresh the current page without destroying the WebView history.
+            binding.webView.reload()
+        }
     }
 
     private fun showNoConnection() {

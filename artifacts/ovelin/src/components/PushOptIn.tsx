@@ -198,8 +198,11 @@ function pollMedianBridge(attempt = 1): void {
   // تحديث callbacks بدوال تمرّر للسيرفر مباشرة (بعد تسجيل الدخول)
   (window as any).gonative_onesignal_info = (r: Record<string, any>) => {
     console.info(LOG, "🔔 gonative_onesignal_info (React handler, full):", JSON.stringify(r));
-    // OneSignal SDK v5+ uses onesignalId/subscriptionId — support all field names
-    const playerId = r?.onesignalId ?? r?.subscriptionId ?? r?.userId ?? r?.playerId ?? r?.id;
+    // OneSignal v5 returns two different IDs:
+    // - onesignalId: the user record
+    // - subscriptionId/playerId: the Android push subscription
+    // The API targets the subscription ID, never the user ID.
+    const playerId = r?.subscriptionId ?? r?.playerId ?? r?.subscription_id ?? r?.id;
     const pushToken = r?.pushToken ?? r?.token ?? r?.fcmToken ?? r?.registrationId;
     if (playerId) saveOnesignalPlayerId(String(playerId)).catch(() => {});
     if (pushToken) saveFcmToken(String(pushToken)).catch(() => {});
@@ -225,7 +228,7 @@ function pollMedianBridge(attempt = 1): void {
   (window as any).ovelin_push_permission_cb = (r: any) => {
     console.info(LOG, "🔔 ovelin_push_permission_cb (React handler, full):", JSON.stringify(r));
     const pushToken = r?.token ?? r?.pushToken ?? r?.fcmToken ?? r?.registrationId;
-    const playerId  = r?.playerId ?? r?.onesignalId ?? r?.subscriptionId ?? r?.userId ?? r?.id;
+    const playerId  = r?.subscriptionId ?? r?.playerId ?? r?.subscription_id ?? r?.id;
     if (pushToken) saveFcmToken(String(pushToken)).catch(() => {});
     if (playerId)  saveOnesignalPlayerId(String(playerId)).catch(() => {});
   };

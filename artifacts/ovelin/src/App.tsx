@@ -90,7 +90,7 @@ const VerifyEmail    = lazy(() => import("@/pages/verify-email"));
 const PushDebug      = lazy(() => import("@/pages/push-debug"));
 const NotFound       = lazy(() => import("@/pages/not-found"));
 
-const IDLE_TIMEOUT_MS = 7 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const LAST_ACTIVE_KEY = "ovelin_last_active";
 
 /* ── Falling pink stars — CSS-only, 11 stars, no JS animation ── */

@@ -460,10 +460,13 @@ router.get("/push/debug-status", requireUser, async (req, res) => {
  * ───────────────────────────────────────────────────────────────────────── */
 router.post("/admin/push-test-external", requireUser, async (req, res) => {
   try {
-    const {
-      ADMIN_EXTERNAL_ID,
-      sendOnesignalToExternalUser,
-    } = await import("../lib/services/onesignalService");
+    const { getAdminExternalId, sendOnesignalToExternalUser } =
+      await import("../lib/services/onesignalService");
+    const adminExternalId = await getAdminExternalId();
+    if (!adminExternalId) {
+      res.status(503).json({ error: "حساب الأدمن غير موجود" });
+      return;
+    }
 
     const started = Date.now();
     const payload = {
@@ -473,12 +476,12 @@ router.post("/admin/push-test-external", requireUser, async (req, res) => {
       tag: "live-test-extid",
     };
 
-    const result = await sendOnesignalToExternalUser(ADMIN_EXTERNAL_ID, payload);
+    const result = await sendOnesignalToExternalUser(adminExternalId, payload);
 
     res.json({
       ok: true,
       elapsed: Date.now() - started,
-      externalId: ADMIN_EXTERNAL_ID,
+      externalId: adminExternalId,
       result,
     });
   } catch (err: any) {
@@ -492,20 +495,23 @@ router.post("/admin/push-test-external", requireUser, async (req, res) => {
  * ───────────────────────────────────────────────────────────────────────── */
 router.post("/admin/push-live-test", requireUser, async (req, res) => {
   try {
-    const {
-      ADMIN_EXTERNAL_ID,
-      sendOnesignalToExternalUser,
-    } = await import("../lib/services/onesignalService");
+    const { getAdminExternalId, sendOnesignalToExternalUser } =
+      await import("../lib/services/onesignalService");
+    const adminExternalId = await getAdminExternalId();
+    if (!adminExternalId) {
+      res.status(503).json({ error: "حساب الأدمن غير موجود" });
+      return;
+    }
 
     const started = Date.now();
-    const result = await sendOnesignalToExternalUser(ADMIN_EXTERNAL_ID, {
+    const result = await sendOnesignalToExternalUser(adminExternalId, {
       title: "🧪 اختبار — طلب شحن جديد",
       body:  "محمد — 500.00 ج.س عبر زين كاش (اختبار حقيقي ✅)",
       url:   "/admin",
       tag:   "live-test-deposit",
     });
     const elapsed = Date.now() - started;
-    res.json({ ok: true, elapsed, externalId: ADMIN_EXTERNAL_ID, result });
+    res.json({ ok: true, elapsed, externalId: adminExternalId, result });
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "فشل الاختبار" });
   }

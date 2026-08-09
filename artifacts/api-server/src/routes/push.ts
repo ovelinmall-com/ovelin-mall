@@ -460,7 +460,7 @@ router.get("/push/debug-status", requireUser, async (req, res) => {
  * ───────────────────────────────────────────────────────────────────────── */
 router.post("/admin/push-test-external", requireUser, async (req, res) => {
   try {
-    const { getAdminExternalId, sendOnesignalToExternalUser } =
+    const { getAdminExternalId } =
       await import("../lib/services/onesignalService");
     const adminExternalId = await getAdminExternalId();
     if (!adminExternalId) {
@@ -476,7 +476,7 @@ router.post("/admin/push-test-external", requireUser, async (req, res) => {
       tag: "live-test-extid",
     };
 
-    const result = await sendOnesignalToExternalUser(adminExternalId, payload);
+    const result = await sendPushToUser(Number(adminExternalId), payload);
 
     res.json({
       ok: true,
@@ -495,7 +495,7 @@ router.post("/admin/push-test-external", requireUser, async (req, res) => {
  * ───────────────────────────────────────────────────────────────────────── */
 router.post("/admin/push-live-test", requireUser, async (req, res) => {
   try {
-    const { getAdminExternalId, sendOnesignalToExternalUser } =
+    const { getAdminExternalId } =
       await import("../lib/services/onesignalService");
     const adminExternalId = await getAdminExternalId();
     if (!adminExternalId) {
@@ -504,7 +504,7 @@ router.post("/admin/push-live-test", requireUser, async (req, res) => {
     }
 
     const started = Date.now();
-    const result = await sendOnesignalToExternalUser(adminExternalId, {
+    const result = await sendPushToUser(Number(adminExternalId), {
       title: "🧪 اختبار — طلب شحن جديد",
       body:  "محمد — 500.00 ج.س عبر زين كاش (اختبار حقيقي ✅)",
       url:   "/admin",

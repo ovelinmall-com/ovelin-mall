@@ -24,6 +24,10 @@ class MainActivity : AppCompatActivity() {
     private val ONESIGNAL_APP_ID = "f2c9dd19-71f0-4af3-8a5b-12f34d99e76a"
     private val LOAD_TIMEOUT_MS = 20_000L
     private val RELOAD_AFTER_BACKGROUND_MS = 5 * 60 * 1000L
+    private val STATE_PREFS = "ovelin_webview_state"
+    private val KEY_BACKGROUND_AT = "background_at"
+    private val KEY_LAST_URL = "last_url"
+    private val KEY_SAVED_AT = "saved_at"
     private var pausedAt: Long = 0
     private var pageLoaded = false
     private var mainFrameFailed = false
@@ -144,14 +148,30 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupSwipeRefresh()
 
-        if (savedInstanceState == null) {
-            loadFreshSite()
-        } else {
+        val state = getSharedPreferences(STATE_PREFS, MODE_PRIVATE)
+        val savedAt = savedInstanceState?.getLong(KEY_SAVED_AT, 0L) ?: 0L
+        val backgroundAt = maxOf(savedAt, state.getLong(KEY_BACKGROUND_AT, 0L))
+        val savedUrl = state.getString(KEY_LAST_URL, null)
+        val recentlyBackgrounded = backgroundAt > 0L &&
+                System.currentTimeMillis() - backgroundAt < RELOAD_AFTER_BACKGROUND_MS &&
+                isAllowedSiteUrl(savedUrl)
+
+        if (savedInstanceState != null && recentlyBackgrounded) {
             binding.webView.restoreState(savedInstanceState)
+        } else {
+            // Android may kill and recreate the Activity while it is in the
+            // background. Restore the last route only inside the five-minute
+            // window; after that always start a fresh session at home.
+            loadFreshSite(
+                resetNavigation = !recentlyBackgrounded,
+                preferredUrl = if (recentlyBackgrounded) savedUrl else null,
+            )
         }
+        state.edit().remove(KEY_BACKGROUND_AT).apply()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        outState.putLong(KEY_SAVED_AT, System.currentTimeMillis())
         super.onSaveInstanceState(outState)
         binding.webView.saveState(outState)
     }
@@ -159,6 +179,14 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         pausedAt = System.currentTimeMillis()
+        persistWebViewState(pausedAt)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Persist onStop as well: this is the lifecycle callback that covers
+        // process death after the app leaves the foreground.
+        persistWebViewState(System.currentTimeMillis())
     }
 
     override fun onResume() {
@@ -170,6 +198,9 @@ class MainActivity : AppCompatActivity() {
                 // current WebView route, scroll position, and in-progress form.
                 loadFreshSite(resetNavigation = true)
             }
+            getSharedPreferences(STATE_PREFS, MODE_PRIVATE).edit()
+                .remove(KEY_BACKGROUND_AT)
+                .apply()
         }
         pausedAt = 0
     }
@@ -344,7 +375,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadFreshSite(resetNavigation: Boolean = false) {
+    private fun loadFreshSite(
+        resetNavigation: Boolean = false,
+        preferredUrl: String? = null,
+    ) {
         pageLoaded = false
         mainFrameFailed = false
         mainHandler.removeCallbacks(loadTimeout)
@@ -363,12 +397,34 @@ class MainActivity : AppCompatActivity() {
             // page after the five-minute background timeout.
             binding.webView.clearHistory()
             binding.webView.loadUrl(TARGET_URL)
+        } else if (isAllowedSiteUrl(preferredUrl)) {
+            binding.webView.loadUrl(preferredUrl!!)
         } else if (binding.webView.url.isNullOrBlank()) {
             binding.webView.loadUrl(TARGET_URL)
         } else {
             // Refresh the current page without destroying the WebView history.
             binding.webView.reload()
         }
+    }
+
+    private fun isAllowedSiteUrl(url: String?): Boolean {
+        if (url.isNullOrBlank()) return false
+        return try {
+            val parsed = android.net.Uri.parse(url)
+            parsed.scheme == "https" && parsed.host == "ovelinmall.com"
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun persistWebViewState(timestamp: Long) {
+        val currentUrl = binding.webView.url
+        val editor = getSharedPreferences(STATE_PREFS, MODE_PRIVATE).edit()
+            .putLong(KEY_BACKGROUND_AT, timestamp)
+        if (isAllowedSiteUrl(currentUrl)) {
+            editor.putString(KEY_LAST_URL, currentUrl)
+        }
+        editor.apply()
     }
 
     private fun showNoConnection() {

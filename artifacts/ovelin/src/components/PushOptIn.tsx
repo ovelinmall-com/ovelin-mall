@@ -156,25 +156,33 @@ export async function registerExternalUserId(userId: number): Promise<void> {
     }).catch(() => {});
 
     // إعلام OneSignal bridge بالـ external_id (يربط الجهاز بالمستخدم)
-    const gn = (window as any).gonative || (window as any).median;
-    if (!gn) return;
-
-    // OneSignal SDK v5: login(externalId)
-    if (typeof gn?.onesignal?.login === "function") {
-      console.info(LOG, `📡 gonative.onesignal.login(${userId}) — SDK v5`);
-      gn.onesignal.login(String(userId));
-    }
-    // OneSignal SDK v3/v4: setExternalUserId
-    if (typeof gn?.onesignal?.setExternalUserId === "function") {
-      console.info(LOG, `📡 gonative.onesignal.setExternalUserId(${userId}) — SDK v3/v4`);
-      gn.onesignal.setExternalUserId(String(userId));
-    }
-    // Median native push tag (لتصفية الإشعارات)
-    if (typeof gn?.push?.tags?.setTags === "function") {
-      gn.push.tags.setTags({ userId: String(userId), isAdmin: "false" });
-    }
+    linkNativeExternalUserId(userId);
   } catch (err: any) {
     console.warn(LOG, "⚠️ registerExternalUserId error:", err?.message);
+  }
+}
+
+/**
+ * يربط الجهاز محلياً فقط. يُستدعى أيضاً من polling لأن جسر Median قد
+ * يتأخر عن React في أول تحميل للـ WebView، وكان ذلك يجعل login() يُفقد.
+ */
+function linkNativeExternalUserId(userId: number): void {
+  const gn = (window as any).gonative || (window as any).median;
+  if (!gn) return;
+
+  // OneSignal SDK v5: login(externalId)
+  if (typeof gn?.onesignal?.login === "function") {
+    console.info(LOG, `📡 gonative.onesignal.login(${userId}) — SDK v5`);
+    gn.onesignal.login(String(userId));
+  }
+  // OneSignal SDK v3/v4: setExternalUserId
+  if (typeof gn?.onesignal?.setExternalUserId === "function") {
+    console.info(LOG, `📡 gonative.onesignal.setExternalUserId(${userId}) — SDK v3/v4`);
+    gn.onesignal.setExternalUserId(String(userId));
+  }
+  // Median native push tag (لتصفية الإشعارات)
+  if (typeof gn?.push?.tags?.setTags === "function") {
+    gn.push.tags.setTags({ userId: String(userId), isAdmin: "false" });
   }
 }
 
@@ -192,7 +200,7 @@ export async function registerExternalUserId(userId: number): Promise<void> {
  *   - gonative_firebase_token
  *   - ovelin_push_permission_cb
  */
-function pollMedianBridge(attempt = 1): void {
+function pollMedianBridge(attempt = 1, externalUserId?: number): void {
   console.info(LOG, `🔄 pollMedianBridge attempt #${attempt}`);
 
   // تحديث callbacks بدوال تمرّر للسيرفر مباشرة (بعد تسجيل الدخول)
@@ -242,6 +250,12 @@ function pollMedianBridge(attempt = 1): void {
     }
 
     console.info(LOG, "✅ Bridge found:", Object.keys(gn).slice(0, 10).join(", "));
+
+    // لا نفترض أن الجسر كان جاهزاً وقت تسجيل الدخول. إعادة login هنا
+    // تضمن أن external_id يُربط بعد جاهزية OneSignal native فعلاً.
+    if (externalUserId != null) {
+      linkNativeExternalUserId(externalUserId);
+    }
 
     if (typeof gn?.onesignal?.onesignalInfo === "function") {
       console.info(LOG, "📡 Calling gonative.onesignal.onesignalInfo (string callback)...");
@@ -420,12 +434,16 @@ export function PushOptIn() {
     registerExternalUserId(user.id).catch(() => {});
 
     // Step 2: poll median bridge (re-registers callbacks + actively requests tokens)
-    pollMedianBridge(1);
+    pollMedianBridge(1, user.id);
 
     // Step 3: retry bridge polling every 5 seconds for 3 minutes
     // This handles cases where the bridge initializes late after the webview loads
     retryIntervalRef.current = setInterval(() => {
       bridgeRetryCountRef.current++;
+      // Keep retrying login even when a previous token already exists.
+      // A cached token does not prove that OneSignal linked this device to
+      // the currently signed-in external user.
+      linkNativeExternalUserId(user.id);
       const hasSavedToken = !!(
         localStorage.getItem("ovelin_onesignal_player_id") ||
         localStorage.getItem("ovelin_fcm_token") ||
@@ -437,8 +455,11 @@ export function PushOptIn() {
         // Already have a token — flush to server in case DB lost it, then stop retrying
         console.info(LOG, `✅ Token found in localStorage — flushing to server (retry #${bridgeRetryCountRef.current})`);
         flushPendingRegistrations().catch(() => {});
-        if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
-        return;
+        // Give a late native bridge a few more attempts to complete login().
+        if (bridgeRetryCountRef.current >= 3) {
+          if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
+          return;
+        }
       }
 
       if (bridgeRetryCountRef.current >= 36) {
@@ -449,7 +470,7 @@ export function PushOptIn() {
       }
 
       console.info(LOG, `🔄 No token yet — polling bridge (retry #${bridgeRetryCountRef.current})`);
-      pollMedianBridge(bridgeRetryCountRef.current + 1);
+      pollMedianBridge(bridgeRetryCountRef.current + 1, user.id);
     }, 5000);
 
     // Step 4: if browser/PWA (not APK), set up Web Push FCM

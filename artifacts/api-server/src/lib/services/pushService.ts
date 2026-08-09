@@ -90,6 +90,11 @@ export type PushPayload = {
  * أرسل إشعار الأدمن إلى External ID المرتبط بالحساب الإداري.
  * يُحلّ المعرّف من البريد الإداري في قاعدة البيانات حتى لا يعتمد
  * الإرسال على رقم مستخدم ثابت قابل للتغيّر.
+ *
+ * الإرسال يمر عبر sendPushToUser بدلاً من external_id فقط:
+ * يبدأ بالـ OneSignal subscription المسجل للجهاز، ثم external_id،
+ * ثم FCM/VAPID. هذا يمنع نجاح طلب API الوهمي عندما يكون login متأخراً
+ * أو عندما يكون external_id غير مربوط بعد في OneSignal.
  */
 export async function sendPushToAdmin(payload: PushPayload): Promise<void> {
   const startMs = Date.now();
@@ -101,8 +106,8 @@ export async function sendPushToAdmin(payload: PushPayload): Promise<void> {
       return;
     }
     logger.info({ externalId, title: payload.title },
-      "[Admin Push] إرسال إلى OneSignal External ID");
-    const result = await sendOnesignalToExternalUser(externalId, payload);
+      "[Admin Push] إرسال عبر subscription ثم external_id وFCM");
+    const result = await sendPushToUser(Number(externalId), payload);
 
     const elapsed = Date.now() - startMs;
     logger.info({ externalId, result, elapsed, title: payload.title },

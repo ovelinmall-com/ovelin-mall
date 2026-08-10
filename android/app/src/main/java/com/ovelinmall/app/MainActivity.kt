@@ -16,6 +16,7 @@ import com.onesignal.OneSignal
 import com.onesignal.debug.LogLevel
 import com.ovelinmall.app.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
@@ -208,8 +209,36 @@ class MainActivity : AppCompatActivity() {
     private fun initOneSignal() {
         OneSignal.Debug.logLevel = LogLevel.NONE
         OneSignal.initWithContext(this, ONESIGNAL_APP_ID)
+
+        // OneSignal creates a new subscription after a reinstall, permission
+        // change, or token refresh. Push the current subscription to the
+        // WebView immediately instead of waiting for a page reload/poll.
+        OneSignal.User.pushSubscription.addObserver {
+            notifyWebPushInfo()
+        }
+
         lifecycleScope.launch {
             OneSignal.Notifications.requestPermission(true)
+            notifyWebPushInfo()
+        }
+    }
+
+    private fun notifyWebPushInfo() {
+        val subscriptionId = OneSignal.User.pushSubscription.id ?: ""
+        val oneSignalUserId = OneSignal.User.onesignalId ?: ""
+        val pushToken = OneSignal.User.pushSubscription.token ?: ""
+        val info = JSONObject()
+            .put("playerId", subscriptionId)
+            .put("subscriptionId", subscriptionId)
+            .put("onesignalId", oneSignalUserId)
+            .put("pushToken", pushToken)
+
+        runOnUiThread {
+            if (!::binding.isInitialized) return@runOnUiThread
+            binding.webView.evaluateJavascript(
+                "window.gonative_onesignal_info && window.gonative_onesignal_info(${info});",
+                null,
+            )
         }
     }
 
@@ -260,6 +289,7 @@ class MainActivity : AppCompatActivity() {
                     binding.swipeRefresh.isRefreshing = false
                     view?.evaluateJavascript(BRIDGE_JS, null)
                     view?.evaluateJavascript(STABILITY_JS, null)
+                    notifyWebPushInfo()
                 }
 
                 override fun onReceivedError(

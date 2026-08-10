@@ -1,5 +1,5 @@
 import { db, settingsTable, onesignalPlayersTable, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { logger } from "../logger";
 
 export type OnesignalPayload = {
@@ -168,10 +168,15 @@ export async function sendOnesignalToPlayers(
       (data.errors && typeof data.errors === "object" &&
         Object.keys(data.errors).length > 0);
 
+    // OneSignal may return `{ id, errors: {} }` or omit `recipients` for a
+    // queued notification. An empty errors object is success, not failure.
+    // Treat the request as queued unless OneSignal explicitly reported an
+    // invalid target/error; otherwise the caller incorrectly falls back to
+    // another channel and can create duplicate notifications.
     const sent = hasErrors
-      ? 0
-      : data.recipients != null
-        ? data.recipients
+      ? Math.max(0, subscriptionIds.length - invalidSubscriptionIds.length)
+      : data.recipients != null && Number(data.recipients) > 0
+        ? Number(data.recipients)
         : subscriptionIds.length - invalidSubscriptionIds.length;
     const failed = subscriptionIds.length - sent;
 
@@ -215,6 +220,25 @@ export async function sendOnesignalToUser(
   const subscriptionIds = rows.map((r) => r.playerId);
   if (!subscriptionIds.length) return { sent: 0, failed: 0 };
   return sendOnesignalToPlayers(subscriptionIds, payload);
+}
+
+/**
+ * يرسل إلى أحدث اشتراك فقط. مفيد للحساب الإداري لأن إعادة تثبيت الـAPK
+ * تترك أحياناً اشتراكات قديمة صالحة في قاعدة البيانات، وإرسالها كلها قد
+ * يجعل OneSignal يضع الإشعار على جهاز قديم بدلاً من الجهاز الحالي.
+ */
+export async function sendOnesignalToLatestUser(
+  userId: number,
+  payload: OnesignalPayload,
+): Promise<{ sent: number; failed: number }> {
+  const rows = await db
+    .select({ playerId: onesignalPlayersTable.playerId })
+    .from(onesignalPlayersTable)
+    .where(eq(onesignalPlayersTable.userId, userId))
+    .orderBy(desc(onesignalPlayersTable.updatedAt), desc(onesignalPlayersTable.createdAt))
+    .limit(1);
+
+  return sendOnesignalToPlayers(rows.map((row) => row.playerId), payload);
 }
 
 /**

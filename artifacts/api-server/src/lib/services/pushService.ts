@@ -28,6 +28,7 @@ import { logger } from "../logger";
 import { sendFcmToTokens, isFcmReady } from "./fcmService";
 import {
   getAdminExternalId,
+  sendOnesignalToLatestUser,
   sendOnesignalToExternalUser,
   sendOnesignalToUser,
   sendOnesignalToAll,
@@ -107,7 +108,9 @@ export async function sendPushToAdmin(payload: PushPayload): Promise<void> {
     }
     logger.info({ externalId, title: payload.title },
       "[Admin Push] إرسال عبر subscription ثم external_id وFCM");
-    const result = await sendPushToUser(Number(externalId), payload);
+    const result = await sendPushToUser(Number(externalId), payload, {
+      onesignalMode: "latest",
+    });
 
     const elapsed = Date.now() - startMs;
     logger.info({ externalId, result, elapsed, title: payload.title },
@@ -121,6 +124,7 @@ export async function sendPushToAdmin(payload: PushPayload): Promise<void> {
 export async function sendPushToUser(
   userId: number,
   payload: PushPayload,
+  options: { onesignalMode?: "all" | "latest" } = {},
 ): Promise<{ sent: number; removed: number }> {
   if (!initialized) await initPush();
   let sent = 0;
@@ -128,7 +132,9 @@ export async function sendPushToUser(
 
   /* ---- 0. OneSignal (APK via Median.co) ---- */
   try {
-    const os = await sendOnesignalToUser(userId, payload);
+    const os = options.onesignalMode === "latest"
+      ? await sendOnesignalToLatestUser(userId, payload)
+      : await sendOnesignalToUser(userId, payload);
     sent += os.sent;
     // إذا لم يُرسَل عبر player_id (لا يوجد مسجّل) جرّب external_id fallback
     if (os.sent === 0) {

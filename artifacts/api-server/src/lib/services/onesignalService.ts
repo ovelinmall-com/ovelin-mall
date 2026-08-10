@@ -145,13 +145,13 @@ export async function sendOnesignalToPlayers(
       body: JSON.stringify(body),
     });
 
-    if (!res.ok) {
-      const text = await res.text();
-      logger.warn({ status: res.status, text }, "OneSignal API error");
-      return { sent: 0, failed: subscriptionIds.length };
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      // Keep the raw response for diagnostics below.
     }
-
-    const data: any = await res.json();
 
     // OneSignal POST response may omit "recipients" (returns just {id}).
     // If the request succeeded and no errors, treat all subscriptions as queued.
@@ -168,16 +168,55 @@ export async function sendOnesignalToPlayers(
       (data.errors && typeof data.errors === "object" &&
         Object.keys(data.errors).length > 0);
 
+    const errorText = JSON.stringify(data.errors ?? text);
+    const allSubscriptionsInactive =
+      /all included players are not subscribed/i.test(errorText);
+    const subscriptionsToRemove = allSubscriptionsInactive
+      ? subscriptionIds
+      : invalidSubscriptionIds;
+
+    // OneSignal returns HTTP 200 for some delivery errors, including the
+    // common "All included players are not subscribed" response. Never treat
+    // that response as a successful send: otherwise FCM/VAPID fallback is
+    // skipped and stale IDs remain in the database forever.
+    if (!res.ok || hasErrors) {
+      if (subscriptionsToRemove.length > 0) {
+        await Promise.all(
+          subscriptionsToRemove.map(async (subscriptionId) => {
+            try {
+              await db
+                .delete(onesignalPlayersTable)
+                .where(eq(onesignalPlayersTable.playerId, subscriptionId));
+            } catch (delErr) {
+              logger.warn(
+                { delErr, subscriptionId },
+                "فشل حذف OneSignal subscription ID من DB",
+              );
+            }
+          }),
+        );
+      }
+
+      logger.warn(
+        {
+          status: res.status,
+          error: errorText.slice(0, 500),
+          failed: subscriptionIds.length,
+          cleaned: subscriptionsToRemove.length,
+        },
+        "OneSignal delivery failed",
+      );
+      return { sent: 0, failed: subscriptionIds.length };
+    }
+
     // OneSignal may return `{ id, errors: {} }` or omit `recipients` for a
     // queued notification. An empty errors object is success, not failure.
     // Treat the request as queued unless OneSignal explicitly reported an
     // invalid target/error; otherwise the caller incorrectly falls back to
     // another channel and can create duplicate notifications.
-    const sent = hasErrors
-      ? Math.max(0, subscriptionIds.length - invalidSubscriptionIds.length)
-      : data.recipients != null && Number(data.recipients) > 0
-        ? Number(data.recipients)
-        : subscriptionIds.length - invalidSubscriptionIds.length;
+    const sent = data.recipients != null && Number(data.recipients) > 0
+      ? Number(data.recipients)
+      : subscriptionIds.length;
     const failed = subscriptionIds.length - sent;
 
     // احذف معرّفات الاشتراك غير الصالحة التي يُعيدها OneSignal في حقل errors

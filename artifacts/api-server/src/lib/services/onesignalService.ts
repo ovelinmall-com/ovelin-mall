@@ -155,11 +155,18 @@ export async function sendOnesignalToPlayers(
 
     // OneSignal POST response may omit "recipients" (returns just {id}).
     // If the request succeeded and no errors, treat all subscriptions as queued.
-    const invalidSubscriptionIds: string[] =
-      data.errors?.invalid_subscription_ids ??
-      data.errors?.invalid_player_ids ??
-      [];
-    const hasErrors = Array.isArray(data.errors) && data.errors.length > 0 && typeof data.errors[0] === "string";
+    const invalidSubscriptionIds: string[] = [
+      ...(Array.isArray(data.errors?.invalid_subscription_ids)
+        ? data.errors.invalid_subscription_ids
+        : []),
+      ...(Array.isArray(data.errors?.invalid_player_ids)
+        ? data.errors.invalid_player_ids
+        : []),
+    ];
+    const hasErrors =
+      (Array.isArray(data.errors) && data.errors.length > 0) ||
+      (data.errors && typeof data.errors === "object" &&
+        Object.keys(data.errors).length > 0);
 
     const sent = hasErrors
       ? 0

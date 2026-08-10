@@ -21,6 +21,15 @@ const LOG = "[PushOptIn]";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
+function isOneSignalSubscriptionId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value.trim(),
+    )
+  );
+}
+
 function toAbsoluteUrl(path: string): string {
   if (!path) return `${window.location.origin}/icon-512.png`;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
@@ -48,6 +57,17 @@ function logStep(step: string, detail?: string, ok = true) {
 // ── حفظ التوكنز في السيرفر ──────────────────────────────────────────────────
 
 export async function saveOnesignalPlayerId(playerId: string): Promise<boolean> {
+  playerId = playerId.trim();
+  if (!isOneSignalSubscriptionId(playerId)) {
+    logStep(
+      "Token Sent To Server (OneSignal)",
+      "تم تجاهل معرّف غير صالح — ننتظر subscription ID جديد",
+      false,
+    );
+    localStorage.removeItem("ovelin_onesignal_player_id");
+    localStorage.removeItem("ovelin_pending_player_id");
+    return false;
+  }
   logStep("Token Sent To Server (OneSignal)", playerId.slice(0, 12) + "…");
   try {
     const r = await fetch(`${BASE}api/push/onesignal-player`, {
@@ -210,9 +230,14 @@ function pollMedianBridge(attempt = 1, externalUserId?: number): void {
     // - onesignalId: the user record
     // - subscriptionId/playerId: the Android push subscription
     // The API targets the subscription ID, never the user ID.
-    const playerId = r?.subscriptionId ?? r?.playerId ?? r?.subscription_id ?? r?.id;
+    // لا تستخدم onesignalId أو r.id هنا: الأول هو User ID وليس اشتراك دفع،
+    // والثاني قد يكون User ID في بعض إصدارات الجسر. الإرسال في السيرفر
+    // يحتاج Subscription ID فقط.
+    const playerId = r?.subscriptionId ?? r?.playerId ?? r?.subscription_id;
     const pushToken = r?.pushToken ?? r?.token ?? r?.fcmToken ?? r?.registrationId;
-    if (playerId) saveOnesignalPlayerId(String(playerId)).catch(() => {});
+    if (isOneSignalSubscriptionId(playerId)) {
+      saveOnesignalPlayerId(playerId).catch(() => {});
+    }
     if (pushToken) saveFcmToken(String(pushToken)).catch(() => {});
     if (!playerId && !pushToken) {
       console.warn(LOG, "⚠️ gonative_onesignal_info: no player_id found. Full:", JSON.stringify(r));
@@ -236,9 +261,9 @@ function pollMedianBridge(attempt = 1, externalUserId?: number): void {
   (window as any).ovelin_push_permission_cb = (r: any) => {
     console.info(LOG, "🔔 ovelin_push_permission_cb (React handler, full):", JSON.stringify(r));
     const pushToken = r?.token ?? r?.pushToken ?? r?.fcmToken ?? r?.registrationId;
-    const playerId  = r?.subscriptionId ?? r?.playerId ?? r?.subscription_id ?? r?.id;
+    const playerId  = r?.subscriptionId ?? r?.playerId ?? r?.subscription_id;
     if (pushToken) saveFcmToken(String(pushToken)).catch(() => {});
-    if (playerId)  saveOnesignalPlayerId(String(playerId)).catch(() => {});
+    if (isOneSignalSubscriptionId(playerId)) saveOnesignalPlayerId(playerId).catch(() => {});
   };
 
   // استدعاء نشط للجسر بالشكل الصحيح (string callback name)
@@ -452,14 +477,10 @@ export function PushOptIn() {
       );
 
       if (hasSavedToken) {
-        // Already have a token — flush to server in case DB lost it, then stop retrying
+        // القيمة المخزنة قديمة بعد تحديث/إعادة تثبيت الـAPK. نعيد طلب
+        // OneSignal دائماً ولا نوقف polling اعتماداً على localStorage.
         console.info(LOG, `✅ Token found in localStorage — flushing to server (retry #${bridgeRetryCountRef.current})`);
         flushPendingRegistrations().catch(() => {});
-        // Give a late native bridge a few more attempts to complete login().
-        if (bridgeRetryCountRef.current >= 3) {
-          if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
-          return;
-        }
       }
 
       if (bridgeRetryCountRef.current >= 36) {

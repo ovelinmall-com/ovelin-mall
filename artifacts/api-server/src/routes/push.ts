@@ -154,9 +154,12 @@ router.post("/push/register-external-id", requireUser, async (req, res) => {
 router.post("/push/onesignal-player", requireUser, async (req, res) => {
   try {
     const user = (req as any).user;
-    const { playerId } = req.body as { playerId?: string };
-    if (!playerId) {
-      res.status(400).json({ error: "playerId مطلوب" });
+    const rawPlayerId = req.body?.playerId;
+    const playerId = typeof rawPlayerId === "string" ? rawPlayerId.trim() : "";
+    // OneSignal SDK v5 returns a UUID subscription ID. Do not store the
+    // OneSignal user ID, FCM token, or an old/empty bridge value here.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(playerId)) {
+      res.status(400).json({ error: "OneSignal subscription ID غير صالح" });
       return;
     }
     const ua = req.headers["user-agent"] ?? null;

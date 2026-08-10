@@ -14,6 +14,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.onesignal.OneSignal
 import com.onesignal.debug.LogLevel
+import com.onesignal.user.subscriptions.IPushSubscriptionObserver
+import com.onesignal.user.subscriptions.PushSubscriptionChangedState
 import com.ovelinmall.app.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -213,9 +215,11 @@ class MainActivity : AppCompatActivity() {
         // OneSignal creates a new subscription after a reinstall, permission
         // change, or token refresh. Push the current subscription to the
         // WebView immediately instead of waiting for a page reload/poll.
-        OneSignal.User.pushSubscription.addObserver {
-            notifyWebPushInfo()
-        }
+        OneSignal.User.pushSubscription.addObserver(object : IPushSubscriptionObserver {
+            override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
+                notifyWebPushInfo()
+            }
+        })
 
         lifecycleScope.launch {
             OneSignal.Notifications.requestPermission(true)

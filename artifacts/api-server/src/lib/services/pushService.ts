@@ -19,7 +19,8 @@
  * ============================================================
  * طبقتان للإرسال:
  *  1. Firebase FCM  (الأولوية) — يشتغل حتى لو التطبيق مغلق
- *  2. Web Push/VAPID (احتياطي) — للمتصفحات الداعمة
+ *  2. OneSignal (احتياطي) — لأجهزة Median APK إذا لم ينجح FCM
+ *  3. Web Push/VAPID (احتياطي أخير) — للمتصفحات الداعمة
  */
 import webpush from "web-push";
 import { db, settingsTable, pushSubscriptionsTable, fcmTokensTable, onesignalPlayersTable } from "@workspace/db";
@@ -92,10 +93,9 @@ export type PushPayload = {
  * يُحلّ المعرّف من البريد الإداري في قاعدة البيانات حتى لا يعتمد
  * الإرسال على رقم مستخدم ثابت قابل للتغيّر.
  *
- * الإرسال يمر عبر sendPushToUser بدلاً من external_id فقط:
- * يبدأ بالـ OneSignal subscription المسجل للجهاز، ثم external_id،
- * ثم FCM/VAPID. هذا يمنع نجاح طلب API الوهمي عندما يكون login متأخراً
- * أو عندما يكون external_id غير مربوط بعد في OneSignal.
+ * الإرسال يمر عبر sendPushToUser:
+ * يبدأ بـ FCM لأنه القناة المؤكدة للأدمن، ثم يستخدم OneSignal/VAPID
+ * كقنوات احتياطية فقط عند فشل FCM.
  */
 export async function sendPushToAdmin(payload: PushPayload): Promise<void> {
   const startMs = Date.now();
@@ -107,7 +107,7 @@ export async function sendPushToAdmin(payload: PushPayload): Promise<void> {
       return;
     }
     logger.info({ externalId, title: payload.title },
-      "[Admin Push] إرسال عبر subscription ثم external_id وFCM");
+      "[Admin Push] إرسال عبر FCM أولاً ثم OneSignal/VAPID كاحتياط");
     const result = await sendPushToUser(Number(externalId), payload, {
       onesignalMode: "latest",
     });
@@ -130,31 +130,8 @@ export async function sendPushToUser(
   let sent = 0;
   let removed = 0;
 
-  /* ---- 0. OneSignal (APK via Median.co) ---- */
-  try {
-    const os = options.onesignalMode === "latest"
-      ? await sendOnesignalToLatestUser(userId, payload)
-      : await sendOnesignalToUser(userId, payload);
-    sent += os.sent;
-    // إذا لم يُرسَل عبر player_id (لا يوجد مسجّل) جرّب external_id fallback
-    if (os.sent === 0) {
-      try {
-        const { sendOnesignalToExternalUser } = await import("./onesignalService");
-        const extResult = await sendOnesignalToExternalUser(String(userId), payload);
-        sent += extResult.sent;
-        if (extResult.sent > 0) {
-          logger.info({ userId, sent: extResult.sent }, "[Push] ✅ External ID fallback نجح");
-        }
-      } catch (extErr) {
-        logger.warn({ extErr, userId }, "[Push] External ID fallback فشل");
-      }
-    }
-  } catch (err) {
-    logger.warn({ err, userId }, "فشل إرسال OneSignal");
-  }
-
-  /* ---- 1. FCM (احتياطي فقط إذا لم يُرسَل عبر OneSignal — لمنع التكرار) ---- */
-  if (isFcmReady() && sent === 0) {
+  /* ---- 0. FCM (القناة الأساسية) ---- */
+  if (isFcmReady()) {
     try {
       const fcmRows = await db
         .select({ token: fcmTokensTable.token })
@@ -183,7 +160,32 @@ export async function sendPushToUser(
     }
   }
 
-  /* ---- 2. VAPID Web Push (احتياطي فقط إذا لم يُرسَل عبر OneSignal أو FCM — لمنع التكرار) ---- */
+  /* ---- 1. OneSignal (احتياطي لأجهزة Median APK) ---- */
+  if (sent === 0) {
+    try {
+      const os = options.onesignalMode === "latest"
+        ? await sendOnesignalToLatestUser(userId, payload)
+        : await sendOnesignalToUser(userId, payload);
+      sent += os.sent;
+
+      // إذا لم يُرسَل عبر الاشتراك جرّب external_id كاحتياط إضافي.
+      if (os.sent === 0) {
+        try {
+          const extResult = await sendOnesignalToExternalUser(String(userId), payload);
+          sent += extResult.sent;
+          if (extResult.sent > 0) {
+            logger.info({ userId, sent: extResult.sent }, "[Push] ✅ External ID fallback نجح");
+          }
+        } catch (extErr) {
+          logger.warn({ extErr, userId }, "[Push] External ID fallback فشل");
+        }
+      }
+    } catch (err) {
+      logger.warn({ err, userId }, "فشل إرسال OneSignal");
+    }
+  }
+
+  /* ---- 2. VAPID Web Push (احتياطي أخير) ---- */
   if (sent > 0) {
     return { sent, removed };
   }

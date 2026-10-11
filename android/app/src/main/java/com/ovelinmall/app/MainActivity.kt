@@ -22,6 +22,7 @@ import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
+    private val fileChooser = WebFileChooser(this)
     private lateinit var binding: ActivityMainBinding
     private lateinit var nativePush: NativePushBridge
     private val TARGET_URL = "https://ovelinmall.com/"
@@ -215,9 +216,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        val preserveFileInput = fileChooser.consumeResumeGuard()
         if (pausedAt > 0) {
             val backgroundDuration = System.currentTimeMillis() - pausedAt
-            if (backgroundDuration >= RELOAD_AFTER_BACKGROUND_MS) {
+            if (backgroundDuration >= RELOAD_AFTER_BACKGROUND_MS && !preserveFileInput) {
                 // A long absence starts a fresh session. Short returns keep the
                 // current WebView route, scroll position, and in-progress form.
                 loadFreshSite(resetNavigation = true)
@@ -236,6 +238,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        fileChooser.cancel()
         if (::nativePush.isInitialized) nativePush.detach()
         mainHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
@@ -375,6 +378,12 @@ class MainActivity : AppCompatActivity() {
             }
 
             webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    webView: WebView?,
+                    callback: ValueCallback<Array<android.net.Uri>>?,
+                    params: FileChooserParams?,
+                ): Boolean = fileChooser.show(callback, params)
+
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                     super.onProgressChanged(view, newProgress)
                     binding.progressBar.visibility = if (newProgress < 100) View.VISIBLE else View.GONE

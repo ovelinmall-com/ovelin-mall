@@ -1,83 +1,26 @@
-name: Build APK
-
+name: Build Push Diagnostics
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - 'diagnostics/**'
   workflow_dispatch:
-
 permissions:
-  contents: write
-
-defaults:
-  run:
-    working-directory: android
-
+  contents: read
 jobs:
-  build:
-    name: Build Release APK
+  diagnostics:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
           cache: gradle
-
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      - name: Generate Keystore
-        run: |
-          keytool -genkey -v \
-            -keystore app/release-keystore.jks \
-            -alias ovelinmall \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass ovelinmall2024 \
-            -keypass ovelinmall2024 \
-            -dname "CN=Ovelin Mall, OU=App, O=OvelinMall, L=Unknown, S=Unknown, C=SA"
-
-      - name: Build Release APK
-        run: ./gradlew assembleRelease
-
-      - name: Rename APK
-        run: |
-          mkdir -p release
-          cp app/build/outputs/apk/release/app-release.apk release/OvelinMall.apk
-
-      - name: Get current date
-        id: date
-        run: echo "date=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - name: Compile isolated diagnostic APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
         with:
-          name: OvelinMall-APK
-          path: android/release/OvelinMall.apk
-          retention-days: 90
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.date.outputs.date }}
-          name: "Ovelin Mall APK - ${{ steps.date.outputs.date }}"
-          body: |
-            ## تحميل تطبيق Ovelin Mall 📱
-
-            ### طريقة التثبيت:
-            1. حمّل ملف `OvelinMall.apk`
-            2. فعّل "تثبيت من مصادر غير معروفة" في إعدادات الجهاز
-            3. ثبّت التطبيق
-
-            > التطبيق يفتح الموقع https://ovelinmall.com/ مباشرة — أي تعديل على الموقع يظهر تلقائياً.
-          files: android/release/OvelinMall.apk
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: Ovelin-Push-Diagnostics
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7

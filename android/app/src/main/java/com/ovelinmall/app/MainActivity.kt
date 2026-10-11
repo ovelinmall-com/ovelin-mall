@@ -151,6 +151,7 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupSwipeRefresh()
 
+        PushDiagnostics.attach(this)
         val state = getSharedPreferences(STATE_PREFS, MODE_PRIVATE)
         val savedAt = savedInstanceState?.getLong(KEY_SAVED_AT, 0L) ?: 0L
         val backgroundAt = maxOf(savedAt, state.getLong(KEY_BACKGROUND_AT, 0L))
@@ -209,7 +210,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initOneSignal() {
-        OneSignal.Debug.logLevel = LogLevel.NONE
+        OneSignal.Debug.logLevel = LogLevel.WARN
         OneSignal.initWithContext(this, ONESIGNAL_APP_ID)
 
         // OneSignal creates a new subscription after a reinstall, permission

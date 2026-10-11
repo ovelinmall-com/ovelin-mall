@@ -11,21 +11,12 @@ android {
         applicationId "com.ovelinmall.app"
         minSdk 21
         targetSdk 34
-        versionCode 2
-        versionName "1.0.1"
+        versionCode 3
+        versionName "1.0.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Only build for real ARM devices → smaller APK
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a"
-        }
-    }
-
-    signingConfigs {
-        release {
-            storeFile file("release-keystore.jks")
-            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "ovelinmall2024"
-            keyAlias "ovelinmall"
-            keyPassword System.getenv("KEY_PASSWORD") ?: "ovelinmall2024"
         }
     }
 
@@ -34,11 +25,10 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
         }
         debug {
-            applicationIdSuffix ".debug"
-            debuggable true
+            applicationIdSuffix ".push"
+            debuggable false
         }
     }
 
@@ -69,5 +59,5 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'androidx.webkit:webkit:1.9.0'
-    implementation 'com.onesignal:OneSignal:5.1.6'
+    implementation 'com.onesignal:OneSignal:5.10.2'
 }

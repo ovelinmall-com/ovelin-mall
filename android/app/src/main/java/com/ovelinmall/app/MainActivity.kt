@@ -23,6 +23,7 @@ import org.json.JSONObject
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var nativePush: NativePushBridge
     private val TARGET_URL = "https://ovelinmall.com/"
     private val ONESIGNAL_APP_ID = "f2c9dd19-71f0-4af3-8a5b-12f34d99e76a"
     private val LOAD_TIMEOUT_MS = 20_000L
@@ -60,6 +61,34 @@ class MainActivity : AppCompatActivity() {
     private val BRIDGE_JS = """
         (function() {
             if (window.gonative && window.gonative._fullyLoaded) return;
+            var callbacks = {};
+            var sequence = 0;
+            window.__ovelinNativePushComplete = function(id, result) {
+                var entry = callbacks[id];
+                if (!entry) return;
+                clearTimeout(entry.timer);
+                delete callbacks[id];
+                if (typeof entry.callback === 'function') entry.callback(result);
+            };
+            var identityRequest = function(kind, value, callback) {
+                var id = 'os_' + kind + '_' + Date.now() + '_' + (++sequence);
+                callbacks[id] = {
+                    callback: callback,
+                    timer: setTimeout(function() {
+                        window.__ovelinNativePushComplete(id, {
+                            success: false, error: 'native_timeout', deliveryConfirmed: false
+                        });
+                    }, 35000)
+                };
+                try {
+                    if (kind === 'login') OvelinBridge.oneSignalLoginWithAck(String(value), id);
+                    else OvelinBridge.oneSignalLogoutWithAck(id);
+                } catch(e) {
+                    window.__ovelinNativePushComplete(id, {
+                        success: false, error: 'native_bridge_unavailable', deliveryConfirmed: false
+                    });
+                }
+            };
             window.gonative = {
                 _fullyLoaded: true,
                 isNative: true,
@@ -67,18 +96,10 @@ class MainActivity : AppCompatActivity() {
                 version: '1.0.0',
                 onesignal: {
                     login: function(externalId, callback) {
-                        try {
-                            OvelinBridge.oneSignalLogin(externalId);
-                            if (typeof callback === 'function') callback({ success: true });
-                        } catch(e) {
-                            if (typeof callback === 'function') callback({ success: false });
-                        }
+                        identityRequest('login', externalId, callback);
                     },
                     logout: function(callback) {
-                        try {
-                            OvelinBridge.oneSignalLogout();
-                            if (typeof callback === 'function') callback({ success: true });
-                        } catch(e) {}
+                        identityRequest('logout', '', callback);
                     },
                     getPlayerId: function(callback) {
                         try {
@@ -97,19 +118,19 @@ class MainActivity : AppCompatActivity() {
                                 var info = {
                                     playerId: subscriptionId,
                                     subscriptionId: subscriptionId,
-                                    onesignalId: userId,
-                                    pushToken: pushToken
+                                    onesignalId: subscriptionId,
+                                    pushReady: OvelinBridge.getOneSignalReady()
                                 };
                                 if (callbackName && typeof window[callbackName] === 'function') {
                                     window[callbackName](info);
                                 }
                                 // OneSignal initializes asynchronously. Keep checking
                                 // so the web app cannot miss the first subscription.
-                                if (!subscriptionId && attempts++ < 24) {
+                                if ((!subscriptionId || !pushToken) && attempts++ < 60) {
                                     setTimeout(deliver, 500);
                                 }
                             } catch(e) {
-                                if (attempts++ < 24) setTimeout(deliver, 500);
+                                if (attempts++ < 60) setTimeout(deliver, 500);
                             }
                         };
                         deliver();
@@ -127,7 +148,7 @@ class MainActivity : AppCompatActivity() {
                             var subscriptionId = OvelinBridge.getOneSignalPlayerId();
                             var userId = OvelinBridge.getOneSignalUserId();
                             if (typeof callback === 'function') callback({
-                                oneSignalUserId: userId,
+                                oneSignalUserId: subscriptionId,
                                 subscriptionId: subscriptionId,
                                 playerId: subscriptionId
                             });
@@ -206,24 +227,26 @@ class MainActivity : AppCompatActivity() {
                 .apply()
         }
         pausedAt = 0
+        if (::nativePush.isInitialized) notifyWebPushInfo()
     }
 
     private fun initOneSignal() {
-        OneSignal.Debug.logLevel = LogLevel.NONE
-        OneSignal.initWithContext(this, ONESIGNAL_APP_ID)
+        nativePush = NativePushBridge(this) { notifyWebPushInfo() }
+        nativePush.attach()
+    }
 
-        // OneSignal creates a new subscription after a reinstall, permission
-        // change, or token refresh. Push the current subscription to the
-        // WebView immediately instead of waiting for a page reload/poll.
-        OneSignal.User.pushSubscription.addObserver(object : IPushSubscriptionObserver {
-            override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
-                notifyWebPushInfo()
-            }
-        })
+    override fun onDestroy() {
+        if (::nativePush.isInitialized) nativePush.detach()
+        mainHandler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
 
-        lifecycleScope.launch {
-            OneSignal.Notifications.requestPermission(true)
-            notifyWebPushInfo()
+    fun deliverNativePushResult(requestId: String, result: JSONObject) {
+        runOnUiThread {
+            if (isDestroyed || !::binding.isInitialized) return@runOnUiThread
+            binding.webView.evaluateJavascript(
+                "window.__ovelinNativePushComplete && window.__ovelinNativePushComplete(" +
+                    JSONObject.quote(requestId) + ", " + result.toString() + ");", null)
         }
     }
 
@@ -234,8 +257,11 @@ class MainActivity : AppCompatActivity() {
         val info = JSONObject()
             .put("playerId", subscriptionId)
             .put("subscriptionId", subscriptionId)
-            .put("onesignalId", oneSignalUserId)
-            .put("pushToken", pushToken)
+            .put("onesignalId", subscriptionId)
+            .put("pushReady", nativePush.ready())
+            .put("externalId", OneSignal.User.externalId)
+            .put("notificationPermission", OneSignal.Notifications.permission)
+            .put("optedIn", OneSignal.User.pushSubscription.optedIn)
 
         runOnUiThread {
             if (!::binding.isInitialized) return@runOnUiThread
@@ -385,13 +411,26 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun oneSignalLogin(externalId: String) {
-            lifecycleScope.launch { OneSignal.login(externalId) }
+            nativePush.login(externalId)
         }
 
         @JavascriptInterface
         fun oneSignalLogout() {
-            lifecycleScope.launch { OneSignal.logout() }
+            nativePush.logout()
         }
+
+        @JavascriptInterface
+        fun oneSignalLoginWithAck(externalId: String, requestId: String) {
+            nativePush.login(externalId, requestId)
+        }
+
+        @JavascriptInterface
+        fun oneSignalLogoutWithAck(requestId: String) {
+            nativePush.logout(requestId)
+        }
+
+        @JavascriptInterface
+        fun getOneSignalReady(): Boolean = nativePush.ready()
 
         @JavascriptInterface
         fun isNativeApp(): Boolean = true

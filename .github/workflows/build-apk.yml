@@ -1,4 +1,4 @@
-name: Build Ovelin Mall 1.0.4 with Firebase
+name: Build Ovelin Mall 1.0.5 with Firebase token activation
 on:
   push:
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
         run: chmod +x gradlew && ./gradlew --no-daemon --max-workers=2 testDebugUnitTest assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: OvelinMall-1.0.4
+          name: OvelinMall-1.0.5
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
             android/app/build/test-results/testDebugUnitTest/

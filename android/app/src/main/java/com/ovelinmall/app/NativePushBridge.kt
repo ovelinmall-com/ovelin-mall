@@ -2,12 +2,16 @@ package com.ovelinmall.app
 
 import androidx.lifecycle.lifecycleScope
 import com.onesignal.OneSignal
+import com.google.firebase.messaging.FirebaseMessaging
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.subscriptions.IPushSubscriptionObserver
 import com.onesignal.user.subscriptions.PushSubscriptionChangedState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 import org.json.JSONObject
 
 /** SDK state is local readiness, not a provider delivery receipt. */
@@ -71,6 +75,10 @@ class NativePushBridge(
                         complete(requestId, false, "notification_permission_required")
                         return@launch
                     }
+                    if (!awaitFirebaseToken()) {
+                        complete(requestId, false, "fcm_token_unavailable")
+                        return@launch
+                    }
                     OneSignal.User.pushSubscription.optIn()
                 }
                 OneSignal.login(externalId)
@@ -95,6 +103,24 @@ class NativePushBridge(
                 complete(requestId, false, "native_registration_failed")
             }
         }
+    }
+
+    private suspend fun awaitFirebaseToken(): Boolean {
+        return withTimeoutOrNull(20_000L) {
+            suspendCancellableCoroutine { continuation ->
+                try {
+                    val messaging = FirebaseMessaging.getInstance()
+                    messaging.isAutoInitEnabled = true
+                    messaging.token.addOnCompleteListener { task ->
+                        if (continuation.isActive) {
+                            continuation.resume(task.isSuccessful && !task.result.isNullOrBlank())
+                        }
+                    }
+                } catch (_: Exception) {
+                    if (continuation.isActive) continuation.resume(false)
+                }
+            }
+        } == true
     }
 
     fun logout(requestId: String = "") {

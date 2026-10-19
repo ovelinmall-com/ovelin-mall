@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity() {
                 };
                 try {
                     if (kind === 'login') OvelinBridge.oneSignalLoginWithAck(String(value), id);
+                    else if (kind === 'link') OvelinBridge.oneSignalLinkAndOptInWithAck(String(value), id);
                     else OvelinBridge.oneSignalLogoutWithAck(id);
                 } catch(e) {
                     window.__ovelinNativePushComplete(id, {
@@ -98,6 +99,9 @@ class MainActivity : AppCompatActivity() {
                 onesignal: {
                     login: function(externalId, callback) {
                         identityRequest('login', externalId, callback);
+                    },
+                    linkAndOptIn: function(externalId, callback) {
+                        identityRequest('link', externalId, callback);
                     },
                     logout: function(callback) {
                         identityRequest('logout', '', callback);
@@ -431,6 +435,11 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun oneSignalLoginWithAck(externalId: String, requestId: String) {
             nativePush.login(externalId, requestId)
+        }
+
+        @JavascriptInterface
+        fun oneSignalLinkAndOptInWithAck(externalId: String, requestId: String) {
+            nativePush.linkAndOptIn(externalId, requestId)
         }
 
         @JavascriptInterface

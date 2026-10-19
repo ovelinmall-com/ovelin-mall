@@ -1,7 +1,6 @@
-name: Rebuild Latest Ovelin APK
+name: Build Ovelin Mall 1.0.4 with Firebase
 on:
   push:
-    branches: ['repairs/native-push-1791680571038']
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,13 +14,20 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - name: Test receipt picker and rebuild latest app
+      - name: Stage and validate Firebase Android configuration
+        env:
+          FIREBASE_ANDROID_CONFIG_JSON: ${{ secrets.FIREBASE_ANDROID_CONFIG_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$FIREBASE_ANDROID_CONFIG_JSON"
+          printf '%s' "$FIREBASE_ANDROID_CONFIG_JSON" > android/app/google-services.json
+          jq -e --arg pkg 'com.ovelinmall.app' --arg project '786618250840' '(.project_info.project_number | tostring) == $project and any(.client[]?; .client_info.android_client_info.package_name == $pkg)' android/app/google-services.json >/dev/null
+      - name: Test and build APK
         working-directory: android
-        run: chmod +x gradlew && ./gradlew testDebugUnitTest assembleDebug
+        run: chmod +x gradlew && ./gradlew --no-daemon --max-workers=2 testDebugUnitTest assembleDebug
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: OvelinMall-Latest
+          name: OvelinMall-1.0.4
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
             android/app/build/test-results/testDebugUnitTest/

@@ -49,6 +49,14 @@ class NativePushBridge(
     }
 
     fun login(externalId: String, requestId: String = "") {
+        registerIdentity(externalId, requestId, activatePush = false)
+    }
+
+    fun linkAndOptIn(externalId: String, requestId: String = "") {
+        registerIdentity(externalId, requestId, activatePush = true)
+    }
+
+    private fun registerIdentity(externalId: String, requestId: String, activatePush: Boolean) {
         activity.lifecycleScope.launch {
             val epoch = ++identityEpoch
             if (externalId.isBlank() || externalId.length > 128) {
@@ -56,6 +64,15 @@ class NativePushBridge(
                 return@launch
             }
             try {
+                if (activatePush) {
+                    val allowed = OneSignal.Notifications.permission ||
+                        OneSignal.Notifications.requestPermission(false)
+                    if (!allowed) {
+                        complete(requestId, false, "notification_permission_required")
+                        return@launch
+                    }
+                    OneSignal.User.pushSubscription.optIn()
+                }
                 OneSignal.login(externalId)
                 repeat(60) {
                     if (epoch != identityEpoch) {
@@ -105,7 +122,7 @@ class NativePushBridge(
     }
 
     private fun complete(requestId: String, success: Boolean, error: String) {
-        if (!Regex("os_(login|logout)_\\d+_\\d+").matches(requestId)) return
+        if (!Regex("os_(login|link|logout)_\\d+_\\d+").matches(requestId)) return
         val result = JSONObject()
             .put("success", success)
             .put("error", error)

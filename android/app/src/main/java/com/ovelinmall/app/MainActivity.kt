@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
                         window.__ovelinNativePushComplete(id, {
                             success: false, error: 'native_timeout', deliveryConfirmed: false
                         });
-                    }, 35000)
+                    }, 60000)
                 };
                 try {
                     if (kind === 'login') OvelinBridge.oneSignalLoginWithAck(String(value), id);

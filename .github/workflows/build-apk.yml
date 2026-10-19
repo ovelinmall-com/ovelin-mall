@@ -1,4 +1,4 @@
-name: Build Ovelin Mall 1.0.5 with Firebase token activation
+name: Build Ovelin Mall 1.0.6 with native push ACK timeout fix
 on:
   push:
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
         run: chmod +x gradlew && ./gradlew --no-daemon --max-workers=2 testDebugUnitTest assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: OvelinMall-1.0.5
+          name: OvelinMall-1.0.6-native-ack-fix
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
             android/app/build/test-results/testDebugUnitTest/

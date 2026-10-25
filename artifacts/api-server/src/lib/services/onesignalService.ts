@@ -89,6 +89,10 @@ function buildNotificationFields(payload: OnesignalPayload, appId: string, siteU
     ...(absoluteUrl ? { url: absoluteUrl } : {}),
     ...(payload.tag ? { collapse_id: payload.tag } : {}),
 
+    // Route every native Android push to the channel with the custom sound.
+    android_channel_id: "ovelin_alerts_custom_v1",
+    android_sound: "ovelin_notification",
+
     // ── الأيقونة ───────────────────────────────────────────────────
     // large_icon = الدائرة على يمين الإشعار في Samsung/أندرويد
     // يستخدم نطاق REPLIT_DOMAINS الحالي (ثابت لكل المشروع)
